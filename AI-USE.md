@@ -4,7 +4,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 
 **Tool used:** Claude (Anthropic), as a chat and coding assistant.
 
-**Not used:** AI-generated images, video or audio. No AI model runs inside the product; every message Astro shows comes from a fixed rule in the code.
+**Not used:** AI-generated images or audio. No AI model runs inside the product; every message Astro shows comes from a fixed rule in the code.
 
 ## Who did what
 
@@ -29,6 +29,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 - Wrote the on-screen wording, the README and this file.
 - Wrote the simulated demo data generator.
 - Wrote first drafts of the project page text and the demo video script for the team to edit.
+- Produced the 30-second demo video at the team's request by filming the real app with a script (`tools/film-demo.py`). The video shows an "AI-generated video" watermark on every frame, and its subtitles are the assistant's wording.
 
 ## Log
 
@@ -44,10 +45,12 @@ Times are US Central.
 | Nov 14, 14:45 to 15:05 | Check of every screen on the live site in a browser, and fixes for five defects it found (phone layout, wording, demo clock times, adherence on a new prescription) | `css/styles.css`, `js/`, `tests/` | Pull request 4; this log |
 | Nov 14, 15:20 to 15:30 | First drafts of the project page fields and the 30-second video script | Project page and demo video, after the team's edits | The SI field on the project page; this log |
 | Nov 14, 15:20 to 16:15 | Research report on which NASA and partner agency data fit Astro, with a browser check of which sources a static page can read | `docs/research/` | Disclosure line at the top of the file |
-| Nov 14, 16:25 to 17:00 | At the team's direction, replaced the assistant's thresholds with NASA's published values, after checking each number against its NASA document | `js/data/indicators.js`, the About screen, the README | A source label on every limit; this log |
+| Nov 14, 16:25 to 16:35 | At the team's direction, replaced the assistant's thresholds with NASA's published values, after checking each number against its NASA document | `js/data/indicators.js`, the About screen, the README | A source label on every limit; this log |
+| Nov 14, 16:35 to 16:50 | The 30-second demo video, filmed from the real app by a script, with subtitles | The project demo link | An "AI-generated video" watermark on every frame; the SI field on the project page; this log |
 
 ## How AI output is marked in the project
 
 - Every source file starts with an AI disclosure comment.
 - The About screen and the page footer state that the code was written with an AI assistant.
 - Simulated data is labelled on every screen that shows it.
+- The demo video shows "AI-generated video" on every frame and says in its last subtitle that the readings are simulated and the code was written with AI.

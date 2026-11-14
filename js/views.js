@@ -488,7 +488,10 @@ export function viewAbout() {
     return `<tr><td>${esc(name)}</td><td>${esc(what)}</td></tr>`;
   }).join('');
   const nasaCount = INDICATORS.filter((i) => i.limitSource.startsWith('nasa')).length;
-  const limitRows = INDICATORS.map((i) => `<tr>
+  // NASA-sourced limits first, in the order the sources are declared.
+  const tierOrder = Object.keys(LIMIT_SOURCES);
+  const byTier = [...INDICATORS].sort((a, b) => tierOrder.indexOf(a.limitSource) - tierOrder.indexOf(b.limitSource));
+  const limitRows = byTier.map((i) => `<tr>
       <td>${esc(i.name)}</td>
       <td>${esc(LIMIT_SOURCES[i.limitSource])}</td>
       <td>${esc(i.limitSummary)}</td>
