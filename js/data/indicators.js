@@ -3,10 +3,15 @@
 // AI disclosure: this file was written with an AI coding assistant (Claude)
 // to the team's specification. See AI-USE.md.
 //
-// Reference bands are standard adult clinical values used on Earth unless
-// `limitSource` is "nasa". NASA publishes numeric in-mission limits for only a
-// few indicators, so every band here is a demo default that a flight surgeon
-// would replace with limits for the individual crew member.
+// Limits come from NASA wherever NASA publishes a number. `limitSource` says
+// which kind each one is:
+//   nasa-standard   a requirement in NASA-STD-3001
+//   nasa-reference  a reference value in a NASA medical brief or evidence report
+//   clinical        NASA publishes no number, so the standard adult clinical
+//                   range used on Earth (or the personal baseline) is shown
+//   self            a self-rating with no clinical threshold
+// The NASA numbers were checked against their source documents on 14 Nov 2026.
+// A flight surgeon would still set the limits for an individual crew member.
 
 export const STATUS = Object.freeze({ OK: 'ok', WATCH: 'watch', ATTENTION: 'attention' });
 
@@ -37,12 +42,23 @@ const SRC = {
   bone: { label: 'NASA: Risk of Spaceflight-Induced Bone Changes', url: 'https://www.nasa.gov/reference/risk-of-spaceflight-induced-bone-changes/' },
   radiationBrief: { label: 'NASA OCHMO technical brief: Radiation Protection', url: 'https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf' },
   srag: { label: 'NASA Space Radiation Analysis Group: How radiation is monitored', url: 'https://srag.jsc.nasa.gov/SpaceRadiation/How/How.cfm' },
+  boneBrief: { label: 'NASA OCHMO medical brief: Bone Loss (OCHMO-MTB-013, Revision D)', url: 'https://www.nasa.gov/wp-content/uploads/2026/02/ochmo-mtb-013-bone-loss.pdf' },
+  renalEvidence: { label: 'NASA Human Research Program evidence report: Risk of Renal Stone Formation', url: 'https://ntrs.nasa.gov/citations/20170004709' },
+  sleepBrief: { label: 'NASA OCHMO technical brief: Sleep Accommodations (OCHMO-TB-041, Revision B)', url: 'https://www.nasa.gov/sites/default/files/atoms/files/sleep_accomodations_technical_brief_ochmo.pdf' },
   bioAnalyzer: { label: 'Canadian Space Agency: Bio-Analyzer', url: 'https://asc-csa.gc.ca/eng/iss/bio-analyzer.asp' },
 };
 
 export const SOURCES = SRC;
 
-const CLINICAL_NOTE = 'Standard adult clinical range used on Earth. NASA publishes no in-flight alert value for this indicator, so your flight surgeon sets the limits that apply to you.';
+export const LIMIT_SOURCES = Object.freeze({
+  'nasa-standard': 'NASA standard',
+  'nasa-reference': 'NASA reference value',
+  clinical: 'Clinical range (NASA publishes no number)',
+  self: 'Self-rating (NASA publishes no number)',
+});
+
+const CLINICAL_NOTE = 'NASA publishes no numeric in-flight limit for this indicator, so Astro shows the standard adult clinical range used on Earth. Your flight surgeon sets the limits that apply to you.';
+const CLINICAL_SUMMARY = 'No NASA number. Standard adult clinical range.';
 
 // Rule order matters: the first matching rule wins. Anything unmatched is "ok".
 // Rule fields: lt, lte, gt, gte (numbers), status, label.
@@ -64,6 +80,7 @@ export const INDICATORS = [
     baseline: { mode: 'pct', direction: 'both', watch: 20, attention: 35 },
     chart: { lo: 50, hi: 100 },
     limitSource: 'clinical',
+    limitSummary: CLINICAL_SUMMARY,
     limitNote: CLINICAL_NOTE,
     why: 'Blood volume falls by 10 to 20 percent in the first days of weightlessness and the heart works against less load. A resting rate that drifts from your own baseline is an early, easy sign that something has changed.',
     how: 'Rest quietly for five minutes. Read the rate from the chest strap, the biomonitor shirt or the blood pressure cuff.',
@@ -97,6 +114,7 @@ export const INDICATORS = [
     ],
     chart: { lo: 90, hi: 120 },
     limitSource: 'clinical',
+    limitSummary: CLINICAL_SUMMARY,
     limitNote: CLINICAL_NOTE,
     why: 'Fluid moves toward the head in weightlessness and plasma volume falls. Pressure runs a little lower in orbit, and low blood volume makes fainting on standing common after landing.',
     how: 'Sit still for five minutes with your arm supported. Wrap the cuff on the upper arm and start the reading. Do not talk during the measurement.',
@@ -123,6 +141,7 @@ export const INDICATORS = [
     ],
     chart: { lo: 36.0, hi: 37.5 },
     limitSource: 'clinical',
+    limitSummary: CLINICAL_SUMMARY,
     limitNote: CLINICAL_NOTE,
     why: 'Resting core temperature rose by about 1 °C over the first two and a half months of flight in one study, and the immune system is less effective in orbit, so a real fever matters more.',
     how: 'Measure at rest, not within 30 minutes of exercise. Use the same thermometer and the same site each time.',
@@ -144,6 +163,7 @@ export const INDICATORS = [
     rules: [],
     baseline: { mode: 'pct', direction: 'down', watch: 5, attention: 10 },
     limitSource: 'clinical',
+    limitSummary: 'No NASA limit. Astro flags a loss of 5 percent and of 10 percent from preflight mass.',
     limitNote: 'Compared with your preflight mass. ISS crews typically lose 1 to 5 percent; a loss above 10 percent is treated as clinically significant on Earth. NASA publishes no numeric in-flight limit.',
     why: 'Crews tend to eat less than they need. In 25 ISS crew members body mass fell by about 3 to 4 percent on average, almost all of it in the first 30 days.',
     how: 'Use the mass measurement device: wrap your legs around the guide arm, hold still and release the spring. Repeat three times and enter the average.',
@@ -163,12 +183,13 @@ export const INDICATORS = [
     hazard: 'gravity',
     input: { min: 20, max: 140, step: 1 },
     rules: [
-      { lt: 80, status: STATUS.ATTENTION, label: 'below the NASA in-mission limit of 80 percent' },
-      { lt: 90, status: STATUS.WATCH, label: 'within 10 points of the NASA limit' },
+      { lt: 80, status: STATUS.ATTENTION, label: 'below the NASA standard of 80 percent' },
     ],
-    chart: { lo: 80, hi: 110 },
-    limitSource: 'nasa',
-    limitNote: 'NASA-STD-3001 sets in-mission aerobic capacity at or above 80 percent of the pre-mission value. The 90 percent watch band is a demo setting.',
+    chart: { lo: 80 },
+    limitSource: 'nasa-standard',
+    limitSummary: 'At or above 80 percent of the pre-mission value.',
+    limitRef: SRC.std3001,
+    limitNote: 'NASA-STD-3001 Volume 1, requirement V1 4003: in-mission aerobic capacity shall be maintained at or above 80 percent of the pre-mission capacity.',
     why: 'Peak oxygen uptake was 17 percent below preflight by flight day 15 in ISS crews and partly recovered later. Between 12 and 21 percent of crew fall more than 20 percent below their preflight value.',
     how: 'Enter the result of your periodic fitness evaluation on the cycle ergometer as a percentage of your preflight value. It is run about every 30 days.',
     actions: {
@@ -194,6 +215,7 @@ export const INDICATORS = [
     ],
     chart: { lo: 70, hi: 100 },
     limitSource: 'clinical',
+    limitSummary: CLINICAL_SUMMARY,
     limitNote: CLINICAL_NOTE,
     why: 'An insulin-resistance index rose during six-month flights, and crews often eat less than planned. Both show up in fasting glucose.',
     how: 'Measure before eating. Clean a fingertip, use the lancet and apply one drop to the analyzer cartridge.',
@@ -213,12 +235,15 @@ export const INDICATORS = [
     hazard: 'environment',
     input: { min: 2, max: 150, step: 1 },
     rules: [
-      { lt: 20, status: STATUS.ATTENTION, label: 'in the deficient range' },
-      { lt: 30, status: STATUS.WATCH, label: 'in the insufficient range' },
+      { lt: 20, status: STATUS.ATTENTION, label: 'below 20 ng/mL, NASA\'s lowest band' },
+      { lt: 35, status: STATUS.WATCH, label: 'below NASA\'s desired range of 35 to 90 ng/mL' },
+      { gt: 90, status: STATUS.WATCH, label: 'above NASA\'s desired range of 35 to 90 ng/mL' },
     ],
-    chart: { lo: 30, hi: 60 },
-    limitSource: 'clinical',
-    limitNote: CLINICAL_NOTE,
+    chart: { lo: 35, hi: 90 },
+    limitSource: 'nasa-reference',
+    limitSummary: 'Desired range 35 to 90 ng/mL. Bands at 35 or higher, 20 to 34, and under 20.',
+    limitRef: SRC.boneBrief,
+    limitNote: 'NASA\'s bone loss medical brief (OCHMO-MTB-013, Revision D) gives 35 to 90 ng/mL as the optimal range for 25-OH vitamin D and lists bands of 35 or higher, 20 to 34, and under 20 ng/mL.',
     why: 'There is no sunlight exposure inside a spacecraft, so vitamin D comes only from food and supplements. It matters because bone is already being lost.',
     how: 'Run a finger-prick sample on the onboard blood analyzer when the panel is scheduled.',
     actions: {
@@ -226,7 +251,7 @@ export const INDICATORS = [
       watch: 'Check your supplement log for missed doses and raise it at your next medical conference.',
       attention: 'Send the result to the flight surgeon so the supplement dose can be reviewed.',
     },
-    sources: [SRC.nutrition, SRC.bone],
+    sources: [SRC.boneBrief, SRC.nutrition, SRC.bone],
   },
   {
     id: 'potassium',
@@ -244,6 +269,7 @@ export const INDICATORS = [
     ],
     chart: { lo: 3.5, hi: 5.0 },
     limitSource: 'clinical',
+    limitSummary: CLINICAL_SUMMARY,
     limitNote: CLINICAL_NOTE,
     why: 'Potassium is tracked when potassium citrate is prescribed, the countermeasure NASA has tested in flight against kidney stones.',
     how: 'Run a finger-prick sample on the onboard blood analyzer when the panel is scheduled.',
@@ -263,12 +289,14 @@ export const INDICATORS = [
     hazard: 'gravity',
     input: { min: 0, max: 8, step: 0.1 },
     rules: [
-      { lt: 1.0, status: STATUS.ATTENTION, label: 'very low' },
-      { lt: 2.0, status: STATUS.WATCH, label: 'below the stone-prevention target' },
+      { lt: 1.5, status: STATUS.ATTENTION, label: 'below 1.5 L a day, where NASA says kidney stone risk increases' },
+      { lt: 2.0, status: STATUS.WATCH, label: 'below NASA\'s normal reference of 2 to 2.5 L a day' },
     ],
-    chart: { lo: 2.0, hi: 3.5 },
-    limitSource: 'clinical',
-    limitNote: 'Kidney stone prevention guidance on Earth aims for 2 to 2.5 litres of urine a day. No verified NASA in-flight value was found.',
+    chart: { lo: 2.0, hi: 3.0 },
+    limitSource: 'nasa-reference',
+    limitSummary: 'Normal reference 2 to 2.5 L a day. Stone risk increases below 1.5. Countermeasure target 2.5 to 3.',
+    limitRef: SRC.renalEvidence,
+    limitNote: 'NASA\'s renal stone evidence report lists 2 to 2.5 L a day as the normal reference, says stone risk increases when volume drops below 1.5 L a day, and sets 2.5 to 3 L a day as the target for a hydration countermeasure.',
     why: 'Low urine volume concentrates the calcium that bone releases in weightlessness, which raises kidney stone risk.',
     how: 'Record the total from the urine collection device over 24 hours.',
     actions: {
@@ -276,7 +304,7 @@ export const INDICATORS = [
       watch: 'Increase fluids today and repeat the collection this week.',
       attention: 'Increase fluids now and send the result to the flight surgeon. Report any flank pain or blood in the urine at once.',
     },
-    sources: [SRC.renal, SRC.urinary],
+    sources: [SRC.renalEvidence, SRC.renal, SRC.urinary],
   },
   {
     id: 'urine_ca',
@@ -287,12 +315,14 @@ export const INDICATORS = [
     hazard: 'gravity',
     input: { min: 0, max: 800, step: 1 },
     rules: [
-      { gt: 300, status: STATUS.ATTENTION, label: 'high' },
-      { gte: 250, status: STATUS.WATCH, label: 'at the upper end of the normal range' },
+      { gt: 300, status: STATUS.WATCH, label: 'above NASA\'s reference for men (300) and women (250 mg a day)' },
+      { gt: 250, status: STATUS.WATCH, label: 'above NASA\'s reference for women (250 mg a day)' },
     ],
-    chart: { lo: 100, hi: 250 },
-    limitSource: 'clinical',
-    limitNote: CLINICAL_NOTE,
+    chart: { hi: 250 },
+    limitSource: 'nasa-reference',
+    limitSummary: 'Normal reference under 300 mg a day for men and under 250 for women.',
+    limitRef: SRC.renalEvidence,
+    limitNote: 'NASA\'s renal stone evidence report lists a normal reference of under 300 mg a day for men and under 250 for women, and counts more than 250 mg a day as hypercalciuria in its crew statistics. NASA publishes no higher alert level, so Astro marks high values for watching.',
     why: 'Bone breaks down faster in weightlessness and the calcium leaves through the urine. Bone density itself cannot be measured in orbit, so this is the closest in-flight signal.',
     how: 'Run the 24-hour collection sample on the onboard analyzer when the panel is scheduled.',
     actions: {
@@ -300,7 +330,7 @@ export const INDICATORS = [
       watch: 'Check your fluid intake and resistance exercise log, and include the result in your next report.',
       attention: 'Send the result to the flight surgeon. Report any flank pain or blood in the urine at once.',
     },
-    sources: [SRC.bone, SRC.renal],
+    sources: [SRC.renalEvidence, SRC.bone, SRC.renal],
   },
   {
     id: 'dose',
@@ -313,8 +343,10 @@ export const INDICATORS = [
     rules: [
       { gte: 600, status: STATUS.ATTENTION, label: 'at or above the NASA career limit of 600 mSv' },
     ],
-    limitSource: 'nasa',
-    limitNote: 'NASA sets a career limit of 600 mSv. This figure covers the current mission only and excludes earlier flights. Radiation is tracked continuously by instruments; no body check can see it at mission-level doses.',
+    limitSource: 'nasa-standard',
+    limitSummary: 'Career effective dose below 600 mSv.',
+    limitRef: SRC.std3001,
+    limitNote: 'NASA-STD-3001 Volume 1, requirement V1 4030: total career effective dose from spaceflight shall be less than 600 mSv, for all ages and sexes. This figure covers the current mission only and excludes earlier flights. Radiation is tracked continuously by instruments; no body check can see it at mission-level doses.',
     why: 'Cosmic rays and solar particles pass through the hull, and shielding stops only a small share of the cosmic-ray dose. The health effects are long-term risks, so the number to follow is the running total.',
     how: 'Read the total mission dose from the display on your personal active dosimeter.',
     actions: {
@@ -333,20 +365,21 @@ export const INDICATORS = [
     hazard: 'isolation',
     input: { min: 0, max: 16, step: 0.1 },
     rules: [
-      { lt: 6, status: STATUS.ATTENTION, label: 'under six hours' },
-      { lt: 7, status: STATUS.WATCH, label: 'under seven hours' },
+      { lt: 7, status: STATUS.WATCH, label: 'under the 7 to 9 hours NASA says adults need' },
     ],
     chart: { lo: 7, hi: 9 },
-    limitSource: 'clinical',
-    limitNote: 'Adults are advised to sleep at least seven hours. On the ISS, nights of six hours or less were linked to slower reactions and higher stress and fatigue. NASA schedules 8.5 hours.',
+    limitSource: 'nasa-reference',
+    limitSummary: 'Adults need 7 to 9 hours. Crews average 6 to 6.5 in flight. No single-night alert value.',
+    limitRef: SRC.sleepBrief,
+    limitNote: 'NASA\'s sleep brief (OCHMO-TB-041, Revision B) says an average adult needs 7 to 9 hours and reports an in-flight average of 6 to 6.5 hours. NASA publishes no alert value for a single night, so Astro marks short nights for watching.',
     why: 'Crews are scheduled 8.5 hours of sleep and get about 6. Short nights were linked to slower reactions and more stress in ISS data.',
     how: 'Enter last night\'s sleep from your actigraphy watch, or your best estimate from lights-out to wake-up minus time spent awake.',
     actions: {
       ok: 'No action. Protect the same sleep window tonight.',
-      watch: 'Dim the cabin lights an hour before sleep and avoid caffeine in the second half of the day.',
+      watch: 'Dim the cabin lights an hour before sleep, avoid caffeine in the second half of the day, and raise repeated short nights with the flight surgeon.',
       attention: 'Tell your crew before safety-critical tasks today, and raise repeated short nights with the flight surgeon.',
     },
-    sources: [SRC.sleepIss, SRC.sleepReport],
+    sources: [SRC.sleepBrief, SRC.sleepIss, SRC.sleepReport],
   },
   {
     id: 'mood',
@@ -363,6 +396,7 @@ export const INDICATORS = [
     baseline: { mode: 'abs', direction: 'down', watch: 2, attention: 4 },
     chart: { lo: 6, hi: 10 },
     limitSource: 'self',
+    limitSummary: 'No NASA number. Compared with your own usual rating.',
     limitNote: 'A self-rating with no clinical threshold. Astro compares it with your own usual rating.',
     why: 'Isolation, confinement and distance from home are among NASA\'s five hazards of spaceflight. In six-month ISS data mood stayed broadly stable while stress ratings rose each quarter.',
     how: 'Rate how you have felt overall today, from 1 (very low) to 10 (very good). There is no right answer.',

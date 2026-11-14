@@ -121,3 +121,13 @@ test('chart handles empty, single and paired series', () => {
   assert.match(pair, /chart-mark/);
   assert.ok(!/NaN/.test(pair));
 });
+
+test('about lists where each limit comes from, and a one-sided band draws', () => {
+  const html = viewAbout();
+  assert.match(html, /Where each limit comes from/);
+  assert.match(html, /NASA reference value/);
+  assert.match(html, /NASA standard/);
+  const svg = lineChart([{ t: '2026-11-01T10:00:00Z', value: 240 }, { t: '2026-11-08T10:00:00Z', value: 290 }], { band: { hi: 250 } });
+  assert.match(svg, /chart-band/);
+  assert.doesNotMatch(svg, /NaN/);
+});

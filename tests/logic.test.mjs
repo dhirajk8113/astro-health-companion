@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { INDICATORS, getIndicator, STATUS } from '../js/data/indicators.js';
+import { INDICATORS, getIndicator, STATUS, LIMIT_SOURCES } from '../js/data/indicators.js';
 import { MEDICATIONS, getMedication } from '../js/data/medications.js';
 import { demoState, emptyState } from '../js/data/demo.js';
 import {
@@ -52,27 +52,36 @@ test('blood pressure uses the worse of the two numbers', () => {
   assert.throws(() => classify(bp, 120));
 });
 
-test('aerobic capacity applies the NASA 80 percent limit', () => {
+test('aerobic capacity applies the NASA 80 percent standard and nothing else', () => {
   const f = ind('fitness');
   assert.equal(classify(f, 95).status, STATUS.OK);
-  assert.equal(classify(f, 88).status, STATUS.WATCH);
-  assert.equal(classify(f, 80).status, STATUS.WATCH);
+  assert.equal(classify(f, 88).status, STATUS.OK);
+  assert.equal(classify(f, 80).status, STATUS.OK);
   assert.equal(classify(f, 79).status, STATUS.ATTENTION);
 });
 
 test('sleep, temperature, urine and dose bands', () => {
   assert.equal(classify(ind('sleep'), 7.5).status, STATUS.OK);
   assert.equal(classify(ind('sleep'), 6.5).status, STATUS.WATCH);
-  assert.equal(classify(ind('sleep'), 5.9).status, STATUS.ATTENTION);
+  assert.equal(classify(ind('sleep'), 5.9).status, STATUS.WATCH);
+  assert.equal(classify(ind('sleep'), 7).status, STATUS.OK);
   assert.equal(classify(ind('temp'), 36.8).status, STATUS.OK);
   assert.equal(classify(ind('temp'), 37.7).status, STATUS.WATCH);
   assert.equal(classify(ind('temp'), 38.0).status, STATUS.ATTENTION);
   assert.equal(classify(ind('urine_vol'), 2.1).status, STATUS.OK);
   assert.equal(classify(ind('urine_vol'), 1.6).status, STATUS.WATCH);
+  assert.equal(classify(ind('urine_vol'), 1.5).status, STATUS.WATCH);
+  assert.equal(classify(ind('urine_vol'), 1.4).status, STATUS.ATTENTION);
   assert.equal(classify(ind('urine_vol'), 0.8).status, STATUS.ATTENTION);
   assert.equal(classify(ind('urine_ca'), 240).status, STATUS.OK);
-  assert.equal(classify(ind('urine_ca'), 250).status, STATUS.WATCH);
-  assert.equal(classify(ind('urine_ca'), 301).status, STATUS.ATTENTION);
+  assert.equal(classify(ind('urine_ca'), 250).status, STATUS.OK);
+  assert.equal(classify(ind('urine_ca'), 251).status, STATUS.WATCH);
+  assert.equal(classify(ind('urine_ca'), 301).status, STATUS.WATCH);
+  assert.match(classify(ind('urine_ca'), 301).label, /men/);
+  assert.equal(classify(ind('vitd'), 36).status, STATUS.OK);
+  assert.equal(classify(ind('vitd'), 34).status, STATUS.WATCH);
+  assert.equal(classify(ind('vitd'), 19).status, STATUS.ATTENTION);
+  assert.equal(classify(ind('vitd'), 95).status, STATUS.WATCH);
   assert.equal(classify(ind('dose'), 27).status, STATUS.OK);
   assert.equal(classify(ind('dose'), 600).status, STATUS.ATTENTION);
   assert.throws(() => classify(ind('sleep'), Number.NaN));
@@ -296,4 +305,23 @@ test('demo doses sit at 09:00 local time, run through yesterday and never in the
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   assert.equal(last.getDate(), yesterday.getDate());
+});
+
+test('every limit names its source, and NASA limits link to a NASA document', () => {
+  for (const i of INDICATORS) {
+    assert.ok(LIMIT_SOURCES[i.limitSource], `${i.id} has a known limit source`);
+    assert.ok(i.limitSummary && i.limitNote, `${i.id} states its limit`);
+    if (i.limitSource.startsWith('nasa')) {
+      assert.match(i.limitRef.url, /^https:\/\/([a-z]+\.)?nasa\.gov\//, `${i.id} links to nasa.gov`);
+    }
+  }
+  const bySource = (name) => INDICATORS.filter((i) => i.limitSource === name).map((i) => i.id).sort();
+  assert.deepEqual(bySource('nasa-standard'), ['dose', 'fitness']);
+  assert.deepEqual(bySource('nasa-reference'), ['sleep', 'urine_ca', 'urine_vol', 'vitd']);
+});
+
+test('the demo shows one reading past a NASA risk line', () => {
+  const items = overview(demoState(NOW));
+  const urgent = items.filter((i) => i.assessment.status === STATUS.ATTENTION).map((i) => i.indicator.id);
+  assert.deepEqual(urgent, ['urine_vol']);
 });

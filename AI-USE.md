@@ -25,7 +25,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
   - keeping all health guidance as fixed rules, with no generative model in the product;
   - treating the medication dispenser as simulated, and using periodic sample panels in place of continuous chemistry.
 - Wrote all code, tests and styles in this repository.
-- Chose the 13 indicators, the reference ranges and the example medication kit from the challenge statement, the research reports and standard clinical references.
+- Chose the 13 indicators, the reference ranges and the example medication kit from the challenge statement, the research reports and standard clinical references. On Nov 14 the team directed that NASA's published values replace those ranges wherever NASA publishes one; the assistant found the NASA values and checked each against its NASA document.
 - Wrote the on-screen wording, the README and this file.
 - Wrote the simulated demo data generator.
 - Wrote first drafts of the project page text and the demo video script for the team to edit.
@@ -44,6 +44,7 @@ Times are US Central.
 | Nov 14, 14:45 to 15:05 | Check of every screen on the live site in a browser, and fixes for five defects it found (phone layout, wording, demo clock times, adherence on a new prescription) | `css/styles.css`, `js/`, `tests/` | Pull request 4; this log |
 | Nov 14, 15:20 to 15:30 | First drafts of the project page fields and the 30-second video script | Project page and demo video, after the team's edits | The SI field on the project page; this log |
 | Nov 14, 15:20 to 16:15 | Research report on which NASA and partner agency data fit Astro, with a browser check of which sources a static page can read | `docs/research/` | Disclosure line at the top of the file |
+| Nov 14, 16:25 to 17:00 | At the team's direction, replaced the assistant's thresholds with NASA's published values, after checking each number against its NASA document | `js/data/indicators.js`, the About screen, the README | A source label on every limit; this log |
 
 ## How AI output is marked in the project
 

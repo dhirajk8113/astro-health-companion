@@ -2,7 +2,7 @@
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 
-import { INDICATORS, GROUPS, HAZARDS, SOURCES, STATUS, getIndicator } from './data/indicators.js';
+import { INDICATORS, GROUPS, HAZARDS, SOURCES, STATUS, LIMIT_SOURCES, getIndicator } from './data/indicators.js';
 import { MEDICATIONS, getMedication } from './data/medications.js';
 import {
   overview, counts, astroSummary, readingsFor, assessReading, trend, beforeAfter,
@@ -178,7 +178,7 @@ export function viewReadings(state, selectedId) {
           <h1>${esc(indicator.name)}</h1>
           ${status}
           ${lineChart(list, { band: indicator.chart, baseline: indicator.id === 'dose' ? undefined : baseline, name: indicator.name, markAt: rx ? rx.start : undefined, markLabel: rx ? `${rx.name} started` : undefined })}
-          <p class="muted small">Shaded band: reference range. ${esc(indicator.limitNote)}</p>
+          <p class="muted small">Shaded band: reference range. <strong>Limit source: ${esc(LIMIT_SOURCES[indicator.limitSource])}.</strong> ${esc(indicator.limitNote)}${indicator.limitRef ? ` <a href="${esc(indicator.limitRef.url)}" target="_blank" rel="noopener">Open the NASA document</a>` : ''}</p>
         </section>
 
         <section class="card">
@@ -487,6 +487,13 @@ export function viewAbout() {
     if (id === 'isolation') what += ', plus stress and loneliness ratings from check-ins';
     return `<tr><td>${esc(name)}</td><td>${esc(what)}</td></tr>`;
   }).join('');
+  const nasaCount = INDICATORS.filter((i) => i.limitSource.startsWith('nasa')).length;
+  const limitRows = INDICATORS.map((i) => `<tr>
+      <td>${esc(i.name)}</td>
+      <td>${esc(LIMIT_SOURCES[i.limitSource])}</td>
+      <td>${esc(i.limitSummary)}</td>
+      <td>${i.limitRef ? `<a href="${esc(i.limitRef.url)}" target="_blank" rel="noopener">${esc(i.limitRef.label)}</a>` : '–'}</td>
+    </tr>`).join('');
   const all = Object.values(SOURCES).map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a></li>`).join('');
   return `
     <section class="card">
@@ -501,12 +508,18 @@ export function viewAbout() {
       <p class="muted small">The five hazards and the health risks linked to them come from NASA's Human Research Program.</p>
     </section>
     <section class="card">
+      <h2>Where each limit comes from</h2>
+      <p>Astro uses NASA's number wherever NASA publishes one. That covers ${nasaCount} of the ${INDICATORS.length} indicators: requirements in NASA-STD-3001, and reference values in NASA's medical briefs and evidence reports. For the rest NASA publishes no numeric in-flight limit, so Astro shows the standard adult clinical range and the crew member's own baseline.</p>
+      <table><thead><tr><th>Indicator</th><th>Source of the limit</th><th>The limit</th><th>Document</th></tr></thead><tbody>${limitRows}</tbody></table>
+      <p class="muted small">The NASA numbers were checked against their source documents on 14 November 2026. A reading outside a NASA reference value is marked "Watch"; a reading past a NASA standard, a NASA-stated risk line or NASA's lowest band is marked "Needs attention".</p>
+    </section>
+    <section class="card">
       <h2>What is real and what is simulated</h2>
       <ul>
         <li>All readings in the demo are simulated. None is NASA data or data from a real person.</li>
         <li>The medication dispenser is simulated. The kit list is an example, not a medical reference.</li>
         <li>The flight surgeon console is part of the demo so one person can show both ends of the loop.</li>
-        <li>Reference ranges are standard adult clinical values used on Earth unless marked as a NASA limit. NASA publishes numeric in-mission limits for only a few indicators.</li>
+        <li>Limits are NASA's wherever NASA publishes a number, and each one is labelled with its source. The others are standard adult clinical values used on Earth.</li>
         <li>Blood and urine panels assume an onboard analyzer that returns results from a small sample. Stool analysis has no in-flight analyzer today and is not included.</li>
       </ul>
     </section>

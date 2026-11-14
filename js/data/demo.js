@@ -103,7 +103,9 @@ export function demoState(nowISO, days = 60) {
       else if (d <= 30) climb = 295;
       else climb = 295 - Math.min(70, (d - 30) * 2.6);
       add('urine_ca', d, 10, Math.round(climb + noise(10)));
-      add('urine_vol', d, 10, round(1.7 + noise(0.25), 1));
+      // The most recent panel shows a low volume, below NASA's 1.5 L risk line.
+      const volume = round(1.7 + noise(0.25), 1);
+      add('urine_vol', d, 10, d + 7 > days ? 1.4 : volume);
     }
     // Blood panel, every two weeks.
     if (d % 14 === 3) {
