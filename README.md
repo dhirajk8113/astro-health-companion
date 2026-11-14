@@ -49,7 +49,7 @@ Astro is organised around NASA's Human Research Program framework. Each indicato
 - [Zwart et al. 2014, body mass changes during long-duration spaceflight](https://www.ncbi.nlm.nih.gov/pubmed/25197887)
 - [Jones et al. 2022, sleep, stress and performance on the ISS](https://pmc.ncbi.nlm.nih.gov/articles/PMC8919197)
 
-The two background research reports in `docs/research/` list every source consulted.
+The three background research reports in `docs/research/` list every source consulted.
 
 ## What is real and what is simulated
 
