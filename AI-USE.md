@@ -18,7 +18,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 **What the AI assistant did**
 
 - Recommended this challenge from the list of 14, based on the team member's background. The team member made the choice.
-- Produced two background research reports with sources (in `docs/research/`) and answered follow-up questions about health problems in spaceflight, radiation monitoring, bone loss, kidney stones and body mass measurement.
+- Produced three background research reports with sources (in `docs/research/`): two on spaceflight health effects and one on which NASA and partner agency data fit Astro. Answered follow-up questions about health problems in spaceflight, radiation monitoring, bone loss, kidney stones and body mass measurement.
 - Reviewed the team's concept against the challenge statement and suggested these refinements, which the team accepted:
   - showing each reading to the astronaut against a reference range and their own baseline, with a flag for when to contact the flight surgeon;
   - calling Astro a companion and adding a handoff to people for serious distress;
@@ -28,6 +28,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 - Chose the 13 indicators, the reference ranges and the example medication kit from the challenge statement, the research reports and standard clinical references.
 - Wrote the on-screen wording, the README and this file.
 - Wrote the simulated demo data generator.
+- Wrote first drafts of the project page text and the demo video script for the team to edit.
 
 ## Log
 
@@ -41,6 +42,8 @@ Times are US Central.
 | Nov 14, 13:03 to 13:20 | Review of the team's concept and suggested refinements | Product design | This log and the About screen |
 | Nov 14, from 13:20 | All code, tests, styles, wording and simulated demo data | Whole repository | Disclosure comment at the top of every source file; About screen; README |
 | Nov 14, 14:45 to 15:05 | Check of every screen on the live site in a browser, and fixes for five defects it found (phone layout, wording, demo clock times, adherence on a new prescription) | `css/styles.css`, `js/`, `tests/` | Pull request 4; this log |
+| Nov 14, 15:20 to 15:30 | First drafts of the project page fields and the 30-second video script | Project page and demo video, after the team's edits | The SI field on the project page; this log |
+| Nov 14, 15:20 to 16:15 | Research report on which NASA and partner agency data fit Astro, with a browser check of which sources a static page can read | `docs/research/` | Disclosure line at the top of the file |
 
 ## How AI output is marked in the project
 
