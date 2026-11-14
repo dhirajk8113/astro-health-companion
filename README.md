@@ -4,6 +4,8 @@ Astro helps an astronaut on a long mission keep track of their own health. It ga
 
 Built for the 2026 NASA Space Apps Challenge: **Create Health Monitoring Software for Astronauts on Space Missions**.
 
+**Live demo:** https://dhirajk8113.github.io/astro-health-companion/ (press **Load simulated demo data** on the first screen)
+
 > Astro is a companion, not a doctor or a therapist. It does not diagnose or treat. All readings in the demo are simulated.
 
 ## What it does
