@@ -40,6 +40,7 @@ Times are US Central.
 | Nov 14, 12:15 to 13:00 | Answers on health problems, radiation checks, bone loss, kidney stones, mass measurement | Background for indicator choices | This log |
 | Nov 14, 13:03 to 13:20 | Review of the team's concept and suggested refinements | Product design | This log and the About screen |
 | Nov 14, from 13:20 | All code, tests, styles, wording and simulated demo data | Whole repository | Disclosure comment at the top of every source file; About screen; README |
+| Nov 14, 14:45 to 15:05 | Check of every screen on the live site in a browser, and fixes for five defects it found (phone layout, wording, demo clock times, adherence on a new prescription) | `css/styles.css`, `js/`, `tests/` | Pull request 4; this log |
 
 ## How AI output is marked in the project
 
