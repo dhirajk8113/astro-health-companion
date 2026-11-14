@@ -31,12 +31,26 @@ Astro follows 13 indicators: resting heart rate, blood pressure, body temperatur
 
 ## NASA data and resources used
 
-Astro is organised around NASA's Human Research Program framework. Each indicator is tied to one of the five hazards of human spaceflight, and each screen links to the NASA source behind it.
+Astro is organised around NASA's Human Research Program framework, and its limits are NASA's wherever NASA publishes a number. Each indicator is tied to one of the five hazards of human spaceflight, each limit is labelled with its source on screen, and the About screen lists all 13.
+
+| Limit | NASA number | NASA document |
+| --- | --- | --- |
+| Aerobic capacity | At or above 80 percent of the pre-mission value | NASA-STD-3001 Volume 1, Revision C, requirement V1 4003 |
+| Mission radiation dose | Career effective dose below 600 mSv | NASA-STD-3001 Volume 1, Revision C, requirement V1 4030 |
+| Vitamin D (25-OH) | Desired range 35 to 90 ng/mL; bands at 35 or higher, 20 to 34, under 20 | OCHMO-MTB-013 Bone Loss, Revision D |
+| Urine volume | Normal 2 to 2.5 L a day; stone risk increases below 1.5 | HRP Evidence Report: Risk of Renal Stone Formation |
+| Urinary calcium | Normal under 300 mg a day for men, under 250 for women | HRP Evidence Report: Risk of Renal Stone Formation |
+| Sleep | Adults need 7 to 9 hours; crews average 6 to 6.5 in flight | OCHMO-TB-041 Sleep Accommodations, Revision B |
+
+For the other seven indicators (resting heart rate, blood pressure, body temperature, body mass, fasting glucose, blood potassium and mood) NASA publishes no numeric in-flight limit, so Astro shows the standard adult clinical range and the crew member's own baseline. The NASA numbers were checked against their source documents on 14 November 2026.
 
 - [NASA Human Research Program: 5 Hazards of Human Spaceflight](https://www.nasa.gov/hrp/hazards/)
 - [NASA Human Research Program: Human Health and Performance Risks](https://www.nasa.gov/hrp/risks/)
 - [NASA Human Research Program: Ongoing Research](https://www.nasa.gov/hrp/ongoing-hrp-research/)
-- [NASA-STD-3001 Volume 1, Revision C: Crew Health](https://standards.nasa.gov/sites/default/files/standards/NASA/C//nasa-std-3001-vol-1-rev-c-signature.pdf), for the in-mission aerobic capacity limit of 80 percent of the pre-mission value
+- [NASA-STD-3001 Volume 1, Revision C: Crew Health](https://standards.nasa.gov/sites/default/files/standards/NASA/C//nasa-std-3001-vol-1-rev-c-signature.pdf), for the aerobic capacity standard (V1 4003) and the career radiation limit (V1 4030)
+- [OCHMO-MTB-013 Bone Loss, Revision D](https://www.nasa.gov/wp-content/uploads/2026/02/ochmo-mtb-013-bone-loss.pdf), for the vitamin D range
+- [HRP Evidence Report: Risk of Renal Stone Formation](https://ntrs.nasa.gov/citations/20170004709), for the urine volume and urinary calcium reference values
+- [OCHMO-TB-041 Sleep Accommodations, Revision B](https://www.nasa.gov/sites/default/files/atoms/files/sleep_accomodations_technical_brief_ochmo.pdf), for the sleep need and the in-flight average
 - NASA Office of the Chief Health and Medical Officer technical briefs: [Exercise](https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-031-exercise-overview.pdf), [Orthostatic Intolerance](https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-019-orthostatic-intolerance.pdf), [Food and Nutrition](https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-013-food-and-nutrition.pdf), [Behavioral Health](https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-016-behavioral-health.pdf), [Radiation Protection](https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf), [Urinary Health](https://www.nasa.gov/ochmo-mtb-003-urinary-health-2/)
 - [NASA: Risk of Renal Stone Formation](https://www.nasa.gov/directorates/esdmd/hhp/risk-of-renal-stone-formation/) and [Risk of Spaceflight-Induced Bone Changes](https://www.nasa.gov/reference/risk-of-spaceflight-induced-bone-changes/)
 - [NASA Space Radiation Analysis Group](https://srag.jsc.nasa.gov/SpaceRadiation/How/How.cfm), for how dose is monitored and the 600 mSv career limit
@@ -55,7 +69,8 @@ The three background research reports in `docs/research/` list every source cons
 
 - **Simulated:** every reading, prescription and check-in in the demo data; the medication dispenser; the flight surgeon console; the signal delay (Mars is compressed from 20 minutes to 20 seconds so a demo does not stall).
 - **From published sources:** why each indicator matters in space, the NASA limits quoted, and how each measurement is taken.
-- **Standard clinical values:** most reference ranges. NASA publishes numeric in-mission limits for only a few indicators, so the ranges here are standard adult values used on Earth, labelled as such on every screen. A flight surgeon would set the real limits for each crew member.
+- **NASA limits:** six of the 13 indicators use a number NASA publishes (table above).
+- **Standard clinical values:** the other seven. NASA publishes no numeric in-flight limit for them, so the ranges are standard adult values used on Earth, labelled as such on screen. A flight surgeon would set the real limits for each crew member.
 - **Not included:** stool analysis, which has no in-flight analyzer today.
 
 ## Run it

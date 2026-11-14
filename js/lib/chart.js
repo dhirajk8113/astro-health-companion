@@ -22,7 +22,7 @@ function niceStep(span) {
 }
 
 // readings: [{ t, value, value2? }] sorted by time.
-// opts: { band: {lo, hi}, baseline, unit, name, markAt (ISO), markLabel }
+// opts: { band: {lo?, hi?}, baseline, unit, name, markAt (ISO), markLabel }
 export function lineChart(readings, opts = {}) {
   if (!readings.length) {
     return '<p class="muted">No readings yet.</p>';
@@ -31,13 +31,20 @@ export function lineChart(readings, opts = {}) {
   const values = readings.flatMap((r) => (Number.isFinite(r.value2) ? [r.value, r.value2] : [r.value]));
   let lo = Math.min(...values);
   let hi = Math.max(...values);
-  if (opts.band) {
-    lo = Math.min(lo, opts.band.lo);
-    hi = Math.max(hi, opts.band.hi);
-  }
   if (Number.isFinite(opts.baseline)) {
     lo = Math.min(lo, opts.baseline);
     hi = Math.max(hi, opts.baseline);
+  }
+  if (opts.band) {
+    // Stretch the scale to a band edge only when it is close to the data. A far
+    // edge (vitamin D's upper bound of 90, say) would flatten the line, so the
+    // band is clipped at the plot edge instead. A band may have one open side.
+    const span = Math.max(hi - lo, Math.abs(hi) * 0.05, 1e-9);
+    const near = (v) => Number.isFinite(v) && v >= lo - span * 1.5 && v <= hi + span * 1.5;
+    const bandLo = opts.band.lo;
+    const bandHi = opts.band.hi;
+    if (near(bandLo)) lo = Math.min(lo, bandLo);
+    if (near(bandHi)) hi = Math.max(hi, bandHi);
   }
   if (lo === hi) {
     lo -= 1;
@@ -55,8 +62,8 @@ export function lineChart(readings, opts = {}) {
   parts.push(`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.name || 'Readings')} over time, ${readings.length} readings">`);
 
   if (opts.band) {
-    const top = y(Math.min(hi, opts.band.hi));
-    const bottom = y(Math.max(lo, opts.band.lo));
+    const top = y(Number.isFinite(opts.band.hi) ? Math.max(lo, Math.min(hi, opts.band.hi)) : hi);
+    const bottom = y(Number.isFinite(opts.band.lo) ? Math.min(hi, Math.max(lo, opts.band.lo)) : lo);
     parts.push(`<rect class="chart-band" x="${PAD.l}" y="${top.toFixed(1)}" width="${W - PAD.l - PAD.r}" height="${Math.max(0, bottom - top).toFixed(1)}"></rect>`);
   }
 
