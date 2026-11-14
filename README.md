@@ -103,12 +103,13 @@ js/lib/store.js       browser storage
 js/data/              indicators, example kit, simulated demo data
 tests/                logic and screen tests
 docs/research/        background research reports
+tools/film-demo.py    script that films the demo video from the running app
 AI-USE.md             log of where and how AI was used
 ```
 
 ## Use of AI
 
-The concept is the team's own. The code, tests, on-screen wording and background research were produced with an AI assistant (Claude) and reviewed by the team. No AI-generated images, audio or video are used, and no AI model runs inside the product. Every source file carries a disclosure comment, and `AI-USE.md` has the full log.
+The concept is the team's own. The code, tests, on-screen wording and background research were produced with an AI assistant (Claude) and reviewed by the team. The 30-second demo video was produced by the AI assistant, which filmed the real app with a script (`tools/film-demo.py`); the video shows an "AI-generated video" watermark on every frame. No AI-generated images or audio are used, and no AI model runs inside the product. Every source file carries a disclosure comment, and `AI-USE.md` has the full log.
 
 ## License
 
