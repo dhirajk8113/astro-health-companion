@@ -142,6 +142,11 @@ export function beforeAfter(readings, startISO, windowDays = 28) {
 }
 
 // Doses due since the prescription started, counting the first dose at start.
+// Lower-cases only the first letter, so "Vitamin D (25-OH)" reads "vitamin D (25-OH)" mid-sentence.
+export function lowerFirst(text) {
+  return text ? text.charAt(0).toLowerCase() + text.slice(1) : '';
+}
+
 export function adherence(prescription, doses, nowISO) {
   const mine = doses.filter((d) => d.prescriptionId === prescription.id);
   const taken = mine.filter((d) => d.status === 'taken').length;
@@ -155,8 +160,10 @@ export function adherence(prescription, doses, nowISO) {
   if (now < start) return { due: 0, taken, skipped, pct: null, asNeeded: false };
   const interval = prescription.everyHours * 60 * 60 * 1000;
   const due = Math.floor((now - start) / interval) + 1;
-  const pct = due > 0 ? Math.min(100, (taken / due) * 100) : null;
-  return { due, taken, skipped, pct, asNeeded: false };
+  // A prescription whose first dose has only just come due has no adherence to report yet.
+  const fresh = due <= 1 && taken + skipped === 0;
+  const pct = due > 0 && !fresh ? Math.min(100, (taken / due) * 100) : null;
+  return { due, taken, skipped, pct, asNeeded: false, fresh };
 }
 
 // When the next scheduled dose falls, given the doses already logged.
@@ -220,7 +227,7 @@ export function astroSummary(items) {
   if (!flagged.length) {
     return `All ${withData.length} indicators with readings are within their reference bands and close to your baseline.`;
   }
-  const names = (list) => list.map((i) => i.indicator.name.toLowerCase()).join(', ');
+  const names = (list) => list.map((i) => lowerFirst(i.indicator.name)).join(', ');
   if (urgent.length) {
     const rest = flagged.length - urgent.length;
     return `${urgent.length === 1 ? 'One reading needs' : `${urgent.length} readings need`} attention now: ${names(urgent)}. ${rest ? `${rest} more ${rest === 1 ? 'is' : 'are'} worth watching. ` : ''}Recheck, then send a report to your flight surgeon.`;

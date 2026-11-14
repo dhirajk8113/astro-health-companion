@@ -9,7 +9,6 @@
 
 import { defaultInventory, getMedication } from './medications.js';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Small seeded generator so the demo looks the same on every load.
 function mulberry32(seed) {
@@ -59,10 +58,14 @@ export function emptyState() {
 export function demoState(nowISO, days = 60) {
   const rand = mulberry32(20261114);
   const noise = (size) => (rand() - 0.5) * 2 * size;
-  const now = new Date(nowISO).getTime();
-  // Day `days` ends at "now", so no simulated reading sits in the future.
-  const start = now - (days + 1) * DAY_MS;
-  const at = (day, hour) => new Date(start + day * DAY_MS + hour * 60 * 60 * 1000).toISOString();
+  // Day `days` is yesterday on the local clock, so no simulated reading sits in
+  // the future and `hour` is a real time of day (a 09:00 dose shows as 9 AM).
+  const at = (day, hour) => {
+    const t = new Date(nowISO);
+    t.setDate(t.getDate() - (days + 1 - day));
+    t.setHours(hour, 0, 0, 0);
+    return t.toISOString();
+  };
 
   const state = emptyState();
   state.profile = { name: 'Demo crew member', mission: 'iss', simulated: true, baselines: { ...DEMO_BASELINES } };
@@ -143,7 +146,7 @@ export function demoState(nowISO, days = 60) {
 
   let doseId = 0;
   const logDoses = (prescriptionId, medId, firstDay, missEvery) => {
-    for (let d = firstDay; d < days; d += 1) {
+    for (let d = firstDay; d <= days; d += 1) {
       doseId += 1;
       const skipped = (d - firstDay) % missEvery === missEvery - 1;
       state.doses.push({

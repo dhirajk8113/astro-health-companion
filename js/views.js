@@ -6,7 +6,7 @@ import { INDICATORS, GROUPS, HAZARDS, SOURCES, STATUS, getIndicator } from './da
 import { MEDICATIONS, getMedication } from './data/medications.js';
 import {
   overview, counts, astroSummary, readingsFor, assessReading, trend, beforeAfter,
-  adherence, nextDose, commDelay, MISSIONS, buildReport,
+  adherence, nextDose, commDelay, MISSIONS, buildReport, lowerFirst,
 } from './lib/assess.js';
 import { BOUNDARY, LEVEL } from './lib/checkin.js';
 import { lineChart } from './lib/chart.js';
@@ -229,7 +229,7 @@ export function viewMeds(state, nowISO) {
         effect = `<p><strong>${esc(linked.name)}</strong> has averaged ${cmp.after.mean.toFixed(1)} ${esc(linked.unit)} since this started, against ${cmp.before.mean.toFixed(1)} in the four weeks before. That is ${Math.abs(cmp.pct).toFixed(0)}% ${dir} (${cmp.before.n} readings before, ${cmp.after.n} after).</p>
           <p class="muted small">This describes the trend. It does not prove the medication caused it. Your flight surgeon sees the same numbers. <a href="#readings/${esc(linked.id)}">Open the chart</a></p>`;
       } else {
-        effect = `<p class="muted small">Not enough ${esc(linked.name.toLowerCase())} readings on both sides of the start date to compare yet (${cmp.before.n} before, ${cmp.after.n} after).</p>`;
+        effect = `<p class="muted small">Not enough ${esc(lowerFirst(linked.name))} readings on both sides of the start date to compare yet (${cmp.before.n} before, ${cmp.after.n} after).</p>`;
       }
     }
 
@@ -355,7 +355,7 @@ function reportTable(report) {
     </tr>`).join('');
   const meds = report.medications.map((m) => `<tr>
       <td>${esc(m.name)} ${esc(m.dose)}</td>
-      <td class="num">${m.adherencePct === null ? 'as needed' : `${m.adherencePct}%`}</td>
+      <td class="num">${m.adherencePct === null ? (m.everyHours ? 'just started' : 'as needed') : `${m.adherencePct}%`}</td>
       <td class="num">${m.dosesTaken}${m.dosesDue !== null ? `/${m.dosesDue}` : ''}</td>
       <td>${m.linkedIndicator ? `${esc(m.linkedIndicator)}: ${m.beforeMean ?? '–'} before, ${m.afterMean ?? '–'} since` : '–'}</td>
     </tr>`).join('');
@@ -481,7 +481,7 @@ export function viewSetup(state) {
 
 export function viewAbout() {
   const hazardRows = Object.entries(HAZARDS).map(([id, name]) => {
-    const tracked = INDICATORS.filter((i) => i.hazard === id).map((i) => i.name.toLowerCase());
+    const tracked = INDICATORS.filter((i) => i.hazard === id).map((i) => lowerFirst(i.name));
     let what = tracked.join(', ');
     if (id === 'distance') what = 'not an indicator: Astro shows the signal delay for the mission and tells you what to do while a report is in transit';
     if (id === 'isolation') what += ', plus stress and loneliness ratings from check-ins';
