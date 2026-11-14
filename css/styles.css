@@ -199,10 +199,18 @@ main {
 .nav-item:hover { background: var(--surface); }
 .nav-item.active { background: var(--accent); color: var(--accent-ink); }
 
+/* Let the detail column shrink to the screen; wide tables scroll inside their card. */
+.split > * { min-width: 0; }
+
 @media (max-width: 760px) {
-  .split { grid-template-columns: 1fr; }
+  .split { grid-template-columns: minmax(0, 1fr); }
   .side { position: static; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
   .nav-group { margin-bottom: 0.25rem; }
+  /* One row of tabs that scrolls sideways, so the header stays short on a phone. */
+  .top { gap: 0.35rem; padding: 0.5rem 0.75rem; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs a { flex: none; white-space: nowrap; }
 }
 
 .button {

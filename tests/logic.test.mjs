@@ -8,7 +8,7 @@ import { INDICATORS, getIndicator, STATUS } from '../js/data/indicators.js';
 import { MEDICATIONS, getMedication } from '../js/data/medications.js';
 import { demoState, emptyState } from '../js/data/demo.js';
 import {
-  classify, baselineDelta, assessReading, trend, beforeAfter, adherence, nextDose,
+  classify, baselineDelta, assessReading, trend, beforeAfter, adherence, nextDose, lowerFirst,
   commDelay, overview, counts, astroSummary, buildReport, readingsFor, worst,
 } from '../js/lib/assess.js';
 import { scoreCheckin, sustainedLow, pickActivities, astroReply, isCrisisText, LEVEL } from '../js/lib/checkin.js';
@@ -262,4 +262,38 @@ test('sustained low mood needs three check-ins in a row', () => {
   assert.equal(sustainedLow([c(1, 6), c(2, 8), c(3, 6)], 8), false);
   assert.equal(sustainedLow([c(1, 5), c(2, 5)], 8), false);
   assert.equal(sustainedLow([c(1, 5), c(2, 5), c(3, 5)], undefined), false);
+});
+
+test('indicator names keep their capitals mid-sentence', () => {
+  assert.equal(lowerFirst('Vitamin D (25-OH)'), 'vitamin D (25-OH)');
+  assert.equal(lowerFirst('Sleep last night'), 'sleep last night');
+  assert.equal(lowerFirst(''), '');
+});
+
+test('a prescription that has only just started reports no adherence yet', () => {
+  const p = { id: 'x', everyHours: 24, start: '2026-11-14T15:00:00.000Z', end: null };
+  const fresh = adherence(p, [], '2026-11-14T15:05:00.000Z');
+  assert.equal(fresh.fresh, true);
+  assert.equal(fresh.pct, null);
+  const late = adherence(p, [], '2026-11-16T15:05:00.000Z');
+  assert.equal(late.fresh, false);
+  assert.equal(late.pct, 0);
+});
+
+test('demo doses sit at 09:00 local time, run through yesterday and never in the future', () => {
+  const now = '2026-11-14T20:47:00.000Z';
+  const s = demoState(now);
+  const nowMs = new Date(now).getTime();
+  assert.ok(s.doses.length > 0);
+  for (const d of s.doses) {
+    const t = new Date(d.t);
+    assert.equal(t.getHours(), 9);
+    assert.equal(t.getMinutes(), 0);
+    assert.ok(t.getTime() < nowMs);
+  }
+  for (const r of s.readings) assert.ok(new Date(r.t).getTime() < nowMs);
+  const last = new Date(Math.max(...s.doses.map((d) => new Date(d.t).getTime())));
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  assert.equal(last.getDate(), yesterday.getDate());
 });
