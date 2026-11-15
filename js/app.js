@@ -8,10 +8,53 @@ import { demoState } from './data/demo.js';
 import { classify, commDelay, buildReport } from './lib/assess.js';
 import { scoreCheckin, sustainedLow, pickActivities, astroReply, LEVEL } from './lib/checkin.js';
 import { loadState, saveState, clearState, newId } from './lib/store.js';
-import { viewToday, viewReadings, viewMeds, viewCheckin, viewSurgeon, viewSetup, viewAbout } from './views.js';
+import { viewToday, viewReadings, viewMeds, viewCheckin, viewSurgeon, viewSetup, viewAbout, viewEnvironment } from './views.js';
+import { fetchDonki } from './lib/spaceweather.js';
+import { connectIss } from './lib/isslive.js';
 
 let state = loadState();
 const ui = { checkin: null, confirmClear: false, breathing: null };
+
+// Real NASA data that lives outside the saved state: space weather from DONKI
+// and the live ISS cabin feed. Neither is stored on the device.
+const env = { donki: { status: 'idle', data: null, at: 0 }, replay: false, iss: { state: 'idle', values: {} } };
+let issClose = null;
+let issTimer = null;
+
+function loadWeather() {
+  const age = Date.now() - env.donki.at;
+  if (env.donki.status === 'loading') return;
+  if (env.donki.status === 'live' && age < 30 * 60000) return;
+  if (env.donki.status === 'failed' && age < 5 * 60000) return;
+  env.donki = { ...env.donki, status: 'loading' };
+  fetchDonki()
+    .then((data) => { env.donki = { status: 'live', data, at: Date.now() }; })
+    .catch(() => { env.donki = { status: 'failed', data: null, at: Date.now() }; })
+    .finally(() => {
+      const name = route().name;
+      if (name === 'environment' || name === 'today') render({ keepFields: true });
+    });
+}
+
+function syncEnvironment(name) {
+  if (name === 'environment' || name === 'today') loadWeather();
+  if (name === 'environment') {
+    if (!issClose) {
+      issClose = connectIss((snapshot) => {
+        env.iss = snapshot;
+        if (issTimer) return;
+        issTimer = window.setTimeout(() => {
+          issTimer = null;
+          if (route().name === 'environment') render({ keepFields: true });
+        }, 1500);
+      });
+    }
+  } else if (issClose) {
+    issClose();
+    issClose = null;
+    env.iss = { state: 'idle', values: {} };
+  }
+}
 
 const main = document.getElementById('main');
 const toastEl = document.getElementById('toast');
@@ -63,6 +106,7 @@ function restoreFields({ kept, focus, open }) {
 
 function render({ keepFields = false } = {}) {
   const r = route();
+  syncEnvironment(r.name);
   const saved = keepFields ? captureFields() : null;
   let html;
   switch (r.name) {
@@ -72,7 +116,8 @@ function render({ keepFields = false } = {}) {
     case 'surgeon': html = viewSurgeon(state, nowISO()); break;
     case 'setup': html = viewSetup(state); break;
     case 'about': html = viewAbout(); break;
-    default: html = viewToday(state);
+    case 'environment': html = viewEnvironment(state, env, nowISO()); break;
+    default: html = viewToday(state, env);
   }
   main.innerHTML = html;
   if (saved) restoreFields(saved);
@@ -129,6 +174,15 @@ function sendReport(note, auto) {
 }
 
 const actions = {
+  'toggle-replay': () => {
+    env.replay = !env.replay;
+    render();
+  },
+  'iss-reconnect': () => {
+    if (issClose) issClose();
+    issClose = null;
+    render();
+  },
   'load-demo': () => {
     state = demoState(nowISO());
     ui.checkin = null;
@@ -361,5 +415,10 @@ window.setInterval(() => {
   const moving = [...state.outbox, ...state.inbox].some((x) => new Date(x.deliverAt).getTime() > now - 1500);
   if (moving) render({ keepFields: true });
 }, 1000);
+
+// Keep the ages on the Environment screen current.
+window.setInterval(() => {
+  if (route().name === 'environment') render({ keepFields: true });
+}, 30000);
 
 render();

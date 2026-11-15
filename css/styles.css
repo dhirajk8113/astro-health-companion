@@ -317,3 +317,7 @@ details.report summary { cursor: pointer; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) {
   .toast { transition: none; }
 }
+
+.banner a { color: inherit; font-weight: 600; }
+.row-current td { background: var(--bg); font-weight: 600; }
+.events { margin: 0.25rem 0 0.75rem; padding-left: 1.1rem; }

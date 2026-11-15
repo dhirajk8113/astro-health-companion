@@ -3,6 +3,10 @@
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 
 import { INDICATORS, GROUPS, HAZARDS, SOURCES, STATUS, LIMIT_SOURCES, getIndicator } from './data/indicators.js';
+import { RADLAB_ISS, QUALITY_FACTOR, DOSE_RATES, doseRateFor, radlabMeanMsvPerDay, DONKI_MAY_2024, I4_PANEL } from './data/nasa-snapshots.js';
+import { marsLightSeconds, earthMarsDistanceAU, formatDelay, AU_KM } from './lib/ephemeris.js';
+import { summarise, isMeasured } from './lib/spaceweather.js';
+import { ISS_ITEMS, cabinStatus, formatAge } from './lib/isslive.js';
 import { MEDICATIONS, getMedication } from './data/medications.js';
 import {
   overview, counts, astroSummary, readingsFor, assessReading, trend, beforeAfter,
@@ -54,7 +58,7 @@ function fmtDelta(indicator, delta) {
 
 function simulatedBanner(state) {
   if (!state.profile.simulated) return '';
-  return '<div class="banner banner-sim" role="note"><strong>Simulated data.</strong> Every reading on this screen is invented for the demo. None of it is NASA data or data from a real person.</div>';
+  return '<div class="banner banner-sim" role="note"><strong>Simulated data.</strong> The readings are invented for the demo, with one exception: the radiation dose replays real ISS detector measurements from NASA\'s RadLab. No reading comes from a real person.</div>';
 }
 
 function sourceLinks(sources) {
@@ -63,7 +67,7 @@ function sourceLinks(sources) {
 
 // ---------- Today ----------
 
-export function viewToday(state) {
+export function viewToday(state, env = null) {
   const items = overview(state);
   const c = counts(items);
   const flagged = items
@@ -107,6 +111,7 @@ export function viewToday(state) {
 
   return `
     ${simulatedBanner(state)}
+    ${weatherBanner(env)}
     <section class="card astro">
       <div class="astro-face" aria-hidden="true">A</div>
       <div>
@@ -179,6 +184,7 @@ export function viewReadings(state, selectedId) {
           ${status}
           ${lineChart(list, { band: indicator.chart, baseline: indicator.id === 'dose' ? undefined : baseline, name: indicator.name, markAt: rx ? rx.start : undefined, markLabel: rx ? `${rx.name} started` : undefined })}
           <p class="muted small">Shaded band: reference range. <strong>Limit source: ${esc(LIMIT_SOURCES[indicator.limitSource])}.</strong> ${esc(indicator.limitNote)}${indicator.limitRef ? ` <a href="${esc(indicator.limitRef.url)}" target="_blank" rel="noopener">Open the NASA document</a>` : ''}</p>
+          ${indicator.dataNote ? `<p class="muted small"><strong>Real data.</strong> ${esc(indicator.dataNote)}</p>` : ''}
         </section>
 
         <section class="card">
@@ -192,6 +198,7 @@ export function viewReadings(state, selectedId) {
           </form>
         </section>
 
+        ${crewPanel(indicator)}
         <section class="card">
           <h2>Why Astro tracks this</h2>
           <p>${esc(indicator.why)}</p>
@@ -257,7 +264,7 @@ export function viewMeds(state, nowISO) {
     </section>`;
   }).join('');
 
-  const kit = MEDICATIONS.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(m.defaultDose)}</td><td class="num">${state.inventory[m.id] ?? 0}</td><td>${esc(m.purpose)}</td></tr>`).join('');
+  const kit = MEDICATIONS.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(m.defaultDose)}</td><td class="num">${state.inventory[m.id] ?? m.kitUnits}</td><td>${m.kit ? `NASA ISS medical kit, ${esc(m.kit)}` : esc(m.kitNote || '')}</td><td>${esc(m.purpose)}</td></tr>`).join('');
 
   return `
     ${simulatedBanner(state)}
@@ -268,9 +275,9 @@ export function viewMeds(state, nowISO) {
     </section>
     ${active || '<section class="card"><p class="muted">No active prescriptions. When your flight surgeon sends one, it appears under Flight surgeon.</p></section>'}
     <section class="card">
-      <h2>Onboard kit (example)</h2>
-      <table><thead><tr><th>Medication</th><th>Usual dose</th><th class="num">Units left</th><th>Why it is carried</th></tr></thead><tbody>${kit}</tbody></table>
-      <p class="muted small">An example formulary for the demo, not a medical reference. Beyond Earth orbit nothing can be sent up, so every prescription has to come from this kit.</p>
+      <h2>Onboard kit</h2>
+      <table><thead><tr><th>Medication</th><th>Strength</th><th class="num">Units left</th><th>Where it is listed</th><th>Why it is carried</th></tr></thead><tbody>${kit}</tbody></table>
+      <p class="muted small">Medications marked "NASA ISS medical kit" appear, with that strength, in <a href="${esc(SOURCES.medKit.url)}" target="_blank" rel="noopener">NASA's ISS Medical Kit: Contents and Reference</a> of 9 April 2015. That list is historical and is not the current formulary. The unit counts are demo values. This is not a medical reference. Beyond Earth orbit nothing can be sent up, so every prescription has to come from the kit on board.</p>
     </section>`;
 }
 
@@ -410,7 +417,7 @@ export function viewSurgeon(state, nowISO) {
     <section class="card">
       <h1>Flight surgeon</h1>
       <p>Astro shows you your readings. Your flight surgeon makes the medical decisions. Send a report whenever something needs a second pair of eyes.</p>
-      <p class="muted">${esc(delay.name)}: about ${delay.oneWaySeconds >= 60 ? `${Math.round(delay.oneWaySeconds / 60)} minutes` : `${delay.oneWaySeconds} second${delay.oneWaySeconds === 1 ? '' : 's'}`} each way. ${esc(delay.note)}</p>
+      <p class="muted">${esc(delay.name)}: ${esc(delayNow(state.profile.mission, nowISO).text)}</p>
       ${delay.oneWaySeconds >= 60 ? '<p class="banner banner-warn">At this distance a reply takes at least twice the one-way delay. For anything urgent, work through the onboard medical checklist with your crew medical officer while the report is in transit.</p>' : ''}
     </section>
 
@@ -519,8 +526,10 @@ export function viewAbout() {
     <section class="card">
       <h2>What is real and what is simulated</h2>
       <ul>
-        <li>All readings in the demo are simulated. None is NASA data or data from a real person.</li>
-        <li>The medication dispenser is simulated. The kit list is an example, not a medical reference.</li>
+        <li>Demo readings are simulated, with one exception: the mission radiation dose replays real ISS detector measurements from NASA's RadLab. No reading comes from a real person's record.</li>
+        <li>Real and live: space weather events from NASA DONKI, cabin readings from NASA's public ISS telemetry, and the signal delay to Mars computed from JPL's planetary positions.</li>
+        <li>Real and saved in the app: the May 2024 solar storm (NASA DONKI), ISS dose measurements (NASA RadLab) and the Inspiration4 crew's blood chemistry ranges (NASA OSDR).</li>
+        <li>The medication dispenser is simulated. Most kit items come from NASA's 2015 ISS medical kit list; the unit counts are demo values and the list is not a medical reference.</li>
         <li>The flight surgeon console is part of the demo so one person can show both ends of the loop.</li>
         <li>Limits are NASA's wherever NASA publishes a number, and each one is labelled with its source. The others are standard adult clinical values used on Earth.</li>
         <li>Blood and urine panels assume an onboard analyzer that returns results from a small sample. Stool analysis has no in-flight analyzer today and is not included.</li>
@@ -533,5 +542,168 @@ export function viewAbout() {
     <section class="card">
       <h2>Sources</h2>
       <ul class="sources">${all}</ul>
+    </section>`;
+}
+
+
+// ---------- Real NASA data: helpers ----------
+
+const fmtUtc = (t) => `${new Date(t).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+
+// The space weather Astro acts on: the stored May 2024 storm when the replay
+// is on, otherwise whatever NASA DONKI returned for the last 30 days.
+export function currentWeather(env, nowMs) {
+  if (!env) return null;
+  if (env.replay) {
+    const d = DONKI_MAY_2024;
+    const at = Date.parse(d.replayNow);
+    return { replay: true, range: d.range, at, summary: summarise({ sep: d.sep, flares: d.flares, flareCount: d.flareCount, storms: d.storms }, at), sep: d.sep };
+  }
+  if (env.donki && env.donki.status === 'live' && env.donki.data) {
+    return { replay: false, range: env.donki.data.range, at: nowMs, summary: summarise(env.donki.data, nowMs), sep: env.donki.data.sep };
+  }
+  return null;
+}
+
+function weatherBanner(env) {
+  const w = currentWeather(env, Date.now());
+  if (!w || !w.summary.alert) return '';
+  const e = w.summary.alert.event;
+  return `<div class="banner banner-warn" role="status"><strong>Space weather${w.replay ? ' (replay of May 2024)' : ''}.</strong> NASA DONKI reports a solar particle event at ${esc(fmtUtc(e.t))}, seen by ${esc(e.inst)}. Follow your shelter instructions and log your dosimeter reading. <a href="#environment">Open Environment</a></div>`;
+}
+
+// One-way signal delay for the mission, right now.
+export function delayNow(mission, nowISO) {
+  const m = commDelay(mission);
+  if (mission === 'mars') {
+    const seconds = marsLightSeconds(new Date(nowISO));
+    return { seconds, text: `${formatDelay(seconds)} each way today, computed from the positions of Earth and Mars (NASA JPL). The demo compresses this to ${m.demoSeconds} seconds.` };
+  }
+  return { seconds: m.oneWaySeconds, text: `about ${formatDelay(m.oneWaySeconds)} each way. ${m.note}` };
+}
+
+// Glucose and potassium: what a real crew's values looked like.
+function crewPanel(indicator) {
+  const panel = I4_PANEL[indicator.id];
+  if (!panel) return '';
+  const rows = panel.draws.map((d) => `<tr><td>${esc(d.when)}</td><td class="num">${d.min} to ${d.max} ${esc(panel.unit)}</td></tr>`).join('');
+  return `<section class="card">
+          <h2>A real crew: Inspiration4</h2>
+          <p>These are not your readings. They are the lowest and highest ${esc(lowerFirst(indicator.name))} among the four Inspiration4 crew at each blood draw, from NASA's Open Science Data Repository.</p>
+          <table><thead><tr><th>Blood draw</th><th class="num">Lowest to highest of four crew</th></tr></thead><tbody>${rows}</tbody></table>
+          <p class="muted small">Three days in orbit, September 2021. Blood was drawn before launch and after return, never in flight, and the file does not say whether the draws were fasting. The laboratory's reference range in the file is ${panel.labRange[0]} to ${panel.labRange[1]} ${esc(panel.unit)}. Source: <a href="${esc(I4_PANEL.url)}" target="_blank" rel="noopener">${esc(I4_PANEL.source)}</a>, retrieved ${esc(I4_PANEL.retrieved)}.</p>
+        </section>`;
+}
+
+// ---------- Environment ----------
+
+function weatherCard(env, nowMs) {
+  const w = currentWeather(env, nowMs);
+  const status = env.replay
+    ? `Replay of saved NASA DONKI data, ${DONKI_MAY_2024.range[0]} to ${DONKI_MAY_2024.range[1]}. The replay stands at ${fmtUtc(DONKI_MAY_2024.replayNow)}; the counts are for the whole month.`
+    : ({
+      live: w ? `Live from NASA DONKI, ${w.range[0]} to ${w.range[1]}.` : '',
+      loading: 'Asking NASA DONKI for the last 30 days.',
+      failed: 'NASA DONKI could not be reached just now. Astro will try again in a few minutes.',
+      idle: 'Not loaded yet.',
+    })[env.donki.status];
+  let body = '';
+  if (w) {
+    const s = w.summary;
+    const events = w.sep.filter((e) => isMeasured(e) && Date.parse(e.t) <= w.at).slice(-6).reverse().map((e) => `<li>${esc(fmtUtc(e.t))}: ${esc(e.inst)}</li>`).join('');
+    body = `
+      ${s.alert
+    ? `<p class="banner banner-warn"><strong>Solar particle event ${Math.round(s.alert.hoursAgo)} hours ago.</strong> Seen by ${esc(s.alert.event.inst)} at ${esc(fmtUtc(s.alert.event.t))}. Follow your shelter instructions, log your dosimeter reading under Mission radiation dose, and tell your flight surgeon.</p>`
+    : '<p><span class="pill pill-ok">✓ Quiet</span> No solar particle event in the last 72 hours.</p>'}
+      <dl class="stats">
+        <div><dt>Particle events</dt><dd>${s.particleEvents}</dd></div>
+        <div><dt>Solar flares</dt><dd>${s.flareCount}</dd></div>
+        <div><dt>Strongest flare</dt><dd>${s.strongestFlare ? esc(s.strongestFlare.c) : '–'}</dd></div>
+        <div><dt>Geomagnetic storms</dt><dd>${s.stormCount}${s.topStorm ? `, Kp ${s.topStorm.kp}` : ''}</dd></div>
+      </dl>
+      ${events ? `<p class="small"><strong>Latest particle events detected by instruments:</strong></p><ul class="events small">${events}</ul>` : ''}`;
+  }
+  return `
+      <h2>Space weather events</h2>
+      <p class="muted">${esc(status)}</p>
+      ${body}
+      <button class="button secondary" data-action="toggle-replay">${env.replay ? 'Back to live data' : 'Replay the May 2024 storm'}</button>
+      <p class="muted small">Source: <a href="${esc(SOURCES.donki.url)}" target="_blank" rel="noopener">${esc(SOURCES.donki.label)}</a>. DONKI reports that an event happened and which instrument saw it. It carries no dose, so Astro never turns an event into a dose figure. Model forecasts are left out of the alert.</p>`;
+}
+
+function doseCard(mission) {
+  const first = Date.parse(`${RADLAB_ISS.firstDay}T12:00:00Z`);
+  const series = RADLAB_ISS.daily.map((value, k) => ({ t: new Date(first + k * 864e5).toISOString(), value }));
+  const meanUgy = RADLAB_ISS.daily.reduce((a, b) => a + b, 0) / RADLAB_ISS.daily.length;
+  const rows = Object.entries(DOSE_RATES).map(([id, r]) => {
+    const rate = doseRateFor(id);
+    return `<tr${id === mission ? ' class="row-current"' : ''}><td>${esc(r.label)}${id === mission ? ' (your mission)' : ''}</td><td class="num">${rate.toFixed(2)} mSv</td><td class="num">${Math.round(600 / rate)} days</td><td>${esc(r.basis)} <a href="${esc(r.url)}" target="_blank" rel="noopener">Source</a></td></tr>`;
+  }).join('');
+  return `
+      <h2>Measured dose on the ISS</h2>
+      <p>The DOSTEL-2 detector in the Columbus module measured an average of ${Math.round(meanUgy)} micrograys a day over ${RADLAB_ISS.daily.length} days from 15 February 2022. With the quality factor of ${QUALITY_FACTOR.value.toFixed(2)} published for these detectors, that is about ${radlabMeanMsvPerDay().toFixed(2)} mSv a day at the detector.</p>
+      ${lineChart(series, { name: 'Daily absorbed dose on the ISS, micrograys' })}
+      <p class="muted small">Daily absorbed dose in micrograys. Source: <a href="${esc(RADLAB_ISS.url)}" target="_blank" rel="noopener">${esc(RADLAB_ISS.source)}</a>, retrieved ${esc(RADLAB_ISS.retrieved)}. Quality factor: <a href="${esc(QUALITY_FACTOR.url)}" target="_blank" rel="noopener">${esc(QUALITY_FACTOR.source)}</a>. The demo's mission radiation dose replays these days.</p>
+      <h3>Dose rate by mission, and NASA's 600 mSv career limit</h3>
+      <table><thead><tr><th>Mission</th><th class="num">Per day</th><th class="num">Days to 600 mSv</th><th>Where the rate comes from</th></tr></thead><tbody>${rows}</tbody></table>
+      <p class="muted small">The days are plain division of NASA's career limit by the measured rate. A crew member's own dose differs from a detector reading and changes with shielding and the solar cycle, so this is a scale, not a forecast.</p>`;
+}
+
+function cabinCard(env, nowMs) {
+  const iss = env.iss || { state: 'idle', values: {} };
+  const label = { pill: { ok: 'pill-ok', attention: 'pill-attention', stale: 'pill-watch' }, word: { ok: '✓ Within limit', attention: '▲ Outside limit', stale: '! Not updating', info: 'Information', none: 'Waiting' } };
+  const rows = ISS_ITEMS.map((item) => {
+    const v = iss.values[item.id];
+    const age = v && Number.isFinite(v.t) ? (nowMs - v.t) / 60000 : NaN;
+    const st = cabinStatus(item, v ? v.value : NaN, age);
+    return `<tr><td>${esc(item.name)}</td><td class="num">${v && Number.isFinite(v.value) ? `${v.value.toFixed(item.digits)} ${esc(item.unit)}` : '–'}</td><td>${esc(formatAge(age))}</td><td>${label.pill[st.status] ? `<span class="pill ${label.pill[st.status]}">${label.word[st.status]}</span> ` : ''}${esc(st.text)}</td></tr>`;
+  }).join('');
+  const state = {
+    live: 'Connected to NASA\'s public ISS telemetry.',
+    connecting: 'Connecting to NASA\'s public ISS telemetry.',
+    closed: 'The ISS telemetry feed is not answering. It drops out for a few minutes on most orbits.',
+    idle: 'Not connected.',
+  }[iss.state] || '';
+  return `
+      <h2>Cabin air and water, live from the ISS</h2>
+      <p class="muted">${esc(state)} ${iss.state === 'closed' ? '<button class="link" data-action="iss-reconnect">Try again</button>' : ''}</p>
+      <table><thead><tr><th>Reading</th><th class="num">Value</th><th>Last sent</th><th>Against NASA's limit</th></tr></thead><tbody>${rows}</tbody></table>
+      <p class="muted small">These are the station's own sensors, read from NASA's public telemetry feed while this screen is open. Each value carries the time the station last sent it, and a value older than 30 minutes is not judged. The limits are NASA-STD-3001 requirements from <a href="${esc(SOURCES.eclssBrief.url)}" target="_blank" rel="noopener">NASA's life support technical brief</a>; the carbon dioxide limit is a one-hour average, so a single reading is only an indication. On another vehicle Astro would read that vehicle's feed.</p>`;
+}
+
+function distanceCard(mission, nowISO) {
+  const date = new Date(nowISO);
+  const au = earthMarsDistanceAU(date);
+  const mine = delayNow(mission, nowISO);
+  return `
+      <h2>Distance from Earth</h2>
+      <p>Mars is ${Math.round(au * AU_KM / 1e6)} million km from Earth today (${au.toFixed(2)} astronomical units). A message takes <strong>${esc(formatDelay(marsLightSeconds(date)))}</strong> each way, and across the cycle of the two orbits that ranges from about 3 to about 22 minutes.</p>
+      <p>${esc(commDelay(mission).name)}, your mission: ${esc(mine.text)}</p>
+      <p class="muted small">Computed in the app from <a href="${esc(SOURCES.jplElements.url)}" target="_blank" rel="noopener">NASA JPL's approximate planetary positions</a>. A reply takes at least twice the one-way delay, which is why Astro tells you what to do while a report is in transit.</p>`;
+}
+
+export function viewEnvironment(state, env, nowISO) {
+  const nowMs = new Date(nowISO).getTime();
+  const mission = state.profile.mission;
+  return `
+    <section class="card">
+      <h1>Environment</h1>
+      <p>Three of NASA's five hazards come from outside your body: space radiation, the closed cabin, and distance from Earth. This screen shows each one with real NASA data.</p>
+    </section>
+    <section class="card">
+      <p class="eyebrow">Hazard: space radiation</p>
+      ${weatherCard(env, nowMs)}
+    </section>
+    <section class="card">
+      <p class="eyebrow">Hazard: space radiation</p>
+      ${doseCard(mission)}
+    </section>
+    <section class="card">
+      <p class="eyebrow">Hazard: hostile closed environment</p>
+      ${cabinCard(env, nowMs)}
+    </section>
+    <section class="card">
+      <p class="eyebrow">Hazard: distance from Earth</p>
+      ${distanceCard(mission, nowISO)}
     </section>`;
 }

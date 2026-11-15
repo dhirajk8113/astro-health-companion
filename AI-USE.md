@@ -29,6 +29,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 - Wrote the on-screen wording, the README and this file.
 - Wrote the simulated demo data generator.
 - Wrote first drafts of the project page text and the demo video script for the team to edit.
+- At the team's direction ("build all the options" from the research report), built the real NASA data features: live DONKI space weather with a replay of the May 2024 storm, ISS dose measurements from RadLab, the live ISS cabin panel, the computed Mars signal delay, the Inspiration4 crew ranges and the NASA medical kit list. The assistant retrieved the data, wrote the code and chose how each is shown.
 - Produced the 30-second demo video at the team's request by filming the real app with a script (`tools/film-demo.py`). The video shows an "AI-generated video" watermark on every frame, and its subtitles are the assistant's wording.
 
 ## Log
@@ -47,6 +48,7 @@ Times are US Central.
 | Nov 14, 15:20 to 16:15 | Research report on which NASA and partner agency data fit Astro, with a browser check of which sources a static page can read | `docs/research/` | Disclosure line at the top of the file |
 | Nov 14, 16:25 to 16:35 | At the team's direction, replaced the assistant's thresholds with NASA's published values, after checking each number against its NASA document | `js/data/indicators.js`, the About screen, the README | A source label on every limit; this log |
 | Nov 14, 16:35 to 16:50 | The 30-second demo video, filmed from the real app by a script, with subtitles | The project demo link | An "AI-generated video" watermark on every frame; the SI field on the project page; this log |
+| Nov 14, 19:17 to 19:40 | Real NASA data features: retrieved and saved the data, wrote the code and the tests | `js/data/nasa-snapshots.js`, `js/lib/spaceweather.js`, `js/lib/isslive.js`, `js/lib/ephemeris.js`, the Environment screen | Disclosure comment in each file; source and retrieval date beside each dataset; this log |
 
 ## How AI output is marked in the project
 

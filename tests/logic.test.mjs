@@ -188,7 +188,7 @@ test('demo state is simulated, in the past, and assessable', () => {
   const now = new Date(NOW).getTime();
   assert.ok(state.readings.length > 300);
   assert.ok(state.readings.every((r) => new Date(r.t).getTime() <= now), 'no reading may be in the future');
-  assert.ok(state.readings.every((r) => r.source === 'simulated'));
+  assert.ok(state.readings.every((r) => r.source === (r.indicatorId === 'dose' ? 'radlab' : 'simulated')), 'only the radiation dose is real data');
   const items = overview(state);
   assert.equal(items.length, INDICATORS.length);
   assert.ok(items.every((i) => i.assessment), 'every indicator has demo data');

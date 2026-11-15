@@ -88,7 +88,7 @@ test('flight surgeon screen shows transit, delivery and the Mars warning', () =>
   state.outbox.push({ id: 'o1', createdAt: NOW, deliverAt: '2026-11-14T18:00:15.000Z', payload: buildReport(state, NOW, 'note') });
   let html = viewSurgeon(state, NOW);
   assert.match(html, /In transit, 15 s/);
-  assert.match(html, /20 minutes each way/);
+  assert.match(html, /minutes( \d+ seconds)? each way today, computed/);
   assert.match(html, /onboard medical checklist/);
   assert.match(html, /No reports have arrived yet/);
   html = viewSurgeon(state, '2026-11-14T18:00:20.000Z');

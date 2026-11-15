@@ -8,6 +8,7 @@
 // screens have something realistic to show.
 
 import { defaultInventory, getMedication } from './medications.js';
+import { radlabDayMsv } from './nasa-snapshots.js';
 
 
 // Small seeded generator so the demo looks the same on every load.
@@ -71,13 +72,14 @@ export function demoState(nowISO, days = 60) {
   state.profile = { name: 'Demo crew member', mission: 'iss', simulated: true, baselines: { ...DEMO_BASELINES } };
 
   let id = 0;
-  const add = (indicatorId, day, hour, value, value2) => {
+  const add = (indicatorId, day, hour, value, value2, source = 'simulated') => {
     id += 1;
-    const r = { id: `r${id}`, indicatorId, t: at(day, hour), value, source: 'simulated' };
+    const r = { id: `r${id}`, indicatorId, t: at(day, hour), value, source };
     if (value2 !== undefined) r.value2 = value2;
     state.readings.push(r);
   };
 
+  let doseTotal = 0;
   for (let d = 1; d <= days; d += 1) {
     // Daily vitals.
     add('hr', d, 7, Math.round(60 + noise(4)));
@@ -88,8 +90,13 @@ export function demoState(nowISO, days = 60) {
     const slept = d === days ? 5.6 : Math.max(3.5, (rough ? 5.4 : 6.3) + noise(0.7));
     add('sleep', d, 8, round(slept, 1));
     add('mood', d, 20, Math.max(1, Math.min(10, Math.round((rough ? 5.2 : 7.4) + noise(1.1)))));
-    // Cumulative dose from the personal dosimeter, about 0.45 mSv a day.
-    if (d % 3 === 0 || d === days) add('dose', d, 9, round(d * 0.45 + noise(0.2), 1));
+    // Cumulative dose. This one is real: the daily dose measured by the DOSTEL-2
+    // detector on the ISS (NASA RadLab), replayed day by day from 15 Feb 2022.
+    doseTotal += radlabDayMsv(d - 1);
+    if (d % 3 === 0 || d === days) {
+      noise(0.2); // keeps the random sequence, and so every other value, unchanged
+      add('dose', d, 9, round(doseTotal, 1), undefined, 'radlab');
+    }
     // Body mass on the mass device, weekly: falls about 3.4 percent in a month.
     if (d % 7 === 0) {
       const loss = Math.min(1, d / 30) * 0.034;
