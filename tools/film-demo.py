@@ -29,14 +29,15 @@ PROBE = set(int(x) for x in sys.argv[2].split(',')) if MODE == 'probe' and len(s
 
 SUBS = [
     'A message to Mars can take 20 minutes each way.',
-    "AeroNYX shows every reading against its safe range, using NASA's limits.",
+    "AeroNYX shows every reading against its safe range, with NASA's limits marked.",
+    'Concept: a sample goes in, and the results are logged in seconds.',
     'It tracks each prescribed dose and how the reading moved afterwards.',
     'Astro, the chat companion, listens, runs a check-in and hands off to people.',
-    'It reads real NASA data: space weather alerts, measured radiation dose and the live ISS cabin.',
+    'It reads real NASA data: space weather, measured radiation dose and the live ISS cabin.',
     'Reports cross the signal delay to the flight surgeon. Doctors decide, not AeroNYX.',
     "Limits are NASA's. Readings are simulated. The device is a concept. Code written with AI.",
 ]
-SCENE_FRAMES = [75, 120, 150, 150, 165, 120, 105]  # 885 frames = 29.5 s
+SCENE_FRAMES = [60, 105, 105, 135, 135, 150, 105, 90]  # 885 frames = 29.5 s
 
 # The machine that renders the video has no internet access, so the two live
 # NASA services cannot be reached while filming. Space weather is shown through
@@ -77,6 +78,8 @@ OVERLAY_JS = r"""
       text-align: center; z-index: 9600; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55); opacity: 0; }
     #f-wm { position: fixed; right: 14px; top: 13px; padding: 5px 13px; border-radius: 999px; background: rgba(12, 17, 27, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.6); color: #fff; font: 700 15px/1.2 Inter, sans-serif; letter-spacing: 0.02em; z-index: 9700; }
+    /* The render machine is offline, so the home screen's live space weather label would read "not reachable". It is left out of the film. */
+    .home-head a.chip[href="#environment"], .home-head span.chip:not(.chip-ok):not(.chip-watch):not(.chip-attention) { display: none !important; }
     #f-note { position: fixed; right: 14px; top: 50px; padding: 5px 13px; border-radius: 999px; background: rgba(12, 17, 27, 0.9);
       border: 1px solid rgba(255, 255, 255, 0.35); color: #e9edf5; font: 600 14px/1.2 Inter, sans-serif; z-index: 9700; opacity: 0; }
     #f-cur { position: fixed; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; background: rgba(255, 255, 255, 0.92);
@@ -266,6 +269,7 @@ def main():
         ev("""() => { const f = document.querySelector('form[data-form="profile"]');
                       f.querySelector('select[name="mission"]').value = 'mars'; f.requestSubmit(); }""")
         time.sleep(0.2)
+        ev("() => localStorage.setItem('aeronyx.tour.v1', 'off')")
         go('#today')
         ev(OVERLAY_JS)
         page.clock.pause_at(datetime.datetime.now() + datetime.timedelta(seconds=2))
@@ -282,9 +286,9 @@ def main():
         n = SCENE_FRAMES[0]
         film.open(1)
         for i in range(n):
-            o = 1 - seg(i, 58, 72)
+            o = 1 - seg(i, 46, 58)
             film.frame({'scrollY': 0, 'sub': SUBS[0], 'subO': sub_o(i, n),
-                        'card': {'kind': 'title', 'o': o, 'p': seg(i, 4, 54)} if o > 0 else None})
+                        'card': {'kind': 'title', 'o': o, 'p': seg(i, 3, 44)} if o > 0 else None})
         film.close()
 
         # ---- scene 2: the home screen in the concept device ----
@@ -292,18 +296,49 @@ def main():
         row = lambda key: f'a.gauge[href="#readings/{key}"]'
         film.open(2)
         for i in range(n):
-            if i < 44:
-                ring = {'sel': row('urine_vol'), 'o': min(seg(i, 10, 18), 1 - seg(i, 38, 44)), 'pad': 5} if i >= 10 else None
-            elif i < 82:
-                ring = {'sel': row('vitd'), 'o': min(seg(i, 44, 52), 1 - seg(i, 76, 82)), 'pad': 5}
+            if i < 40:
+                ring = {'sel': row('urine_vol'), 'o': min(seg(i, 8, 16), 1 - seg(i, 34, 40)), 'pad': 5} if i >= 8 else None
+            elif i < 72:
+                ring = {'sel': row('vitd'), 'o': min(seg(i, 40, 48), 1 - seg(i, 66, 72)), 'pad': 5}
             else:
-                ring = {'sel': row('dose'), 'o': min(seg(i, 82, 90), 1 - seg(i, n - 8, n - 2)), 'pad': 5}
+                ring = {'sel': row('dose'), 'o': min(seg(i, 72, 80), 1 - seg(i, n - 8, n - 2)), 'pad': 5}
             film.frame({'scrollY': 0, 'sub': SUBS[1], 'subO': sub_o(i, n), 'ring': ring,
                         'note': {'text': "Concept device from the team's sketch. No hardware exists.", 'o': min(seg(i, 6, 16), 1 - seg(i, n - 10, n - 2))}})
         film.close()
 
-        # ---- scene 3: a dose is dispensed, then how the reading moved ----
+        # ---- scene 3: a simulated sample run through the sample submitter ----
         n = SCENE_FRAMES[2]
+        go('#sample')
+        bx, by = center('[data-action="run-sample"][data-kind="blood"]')
+        start = (VW * 0.62, VH * 0.26)
+        film.open(3)
+        pressed = False
+        skipped = False
+        for i in range(n):
+            st = {'scrollY': 0, 'sub': SUBS[2], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6),
+                  'note': {'text': 'Simulated analysis. No analyser is connected.', 'o': min(seg(i, 8, 18), 1 - seg(i, n - 10, n - 2))}}
+            if i < 24:
+                t = seg(i, 6, 22)
+                st['cur'] = {'x': lerp(start[0], bx, t), 'y': lerp(start[1], by, t)}
+            else:
+                if not pressed:
+                    ev("() => document.querySelector('[data-action=\"run-sample\"][data-kind=\"blood\"]').click()")
+                    time.sleep(0.15)
+                    pressed = True
+                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 24, 30), 'o': 1 - seg(i, 28, 34)}
+                if i < 58:
+                    st['ring'] = {'sel': '.dv-sample', 'o': min(seg(i, 30, 38), 1 - seg(i, 52, 58)), 'pad': 6}
+                else:
+                    if not skipped:
+                        page.clock.run_for(1700)  # the rest of the analysis
+                        time.sleep(0.15)
+                        skipped = True
+                    st['ring'] = {'sel': 'section.sample table', 'o': seg(i, 64, 74), 'pad': 6}
+            film.frame(st)
+        film.close()
+
+        # ---- scene 4: a dose is dispensed, then how the reading moved ----
+        n = SCENE_FRAMES[3]
         go('#meds')
 
         def tag_rx():
@@ -315,12 +350,12 @@ def main():
         ev('y => window.scrollTo(0, y)', ya)
         bx, by = center('[data-film="rx"] [data-action="take-dose"]')
         start = (VW * 0.55, VH * 0.3)
-        film.open(3)
+        film.open(4)
         pressed = False
         for i in range(n):
-            st = {'scrollY': ya, 'sub': SUBS[2], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
-            if i < 26:
-                t = seg(i, 6, 24)
+            st = {'scrollY': ya, 'sub': SUBS[3], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
+            if i < 22:
+                t = seg(i, 5, 20)
                 st['cur'] = {'x': lerp(start[0], bx, t), 'y': lerp(start[1], by, t)}
             else:
                 if not pressed:
@@ -328,29 +363,29 @@ def main():
                     time.sleep(0.15)
                     tag_rx()
                     pressed = True
-                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 26, 34), 'o': 1 - seg(i, 30, 38)}
-                if i < 96:
-                    st['ring'] = {'sel': '.dv-meds', 'o': min(seg(i, 34, 42), 1 - seg(i, 90, 96)), 'pad': 6}
+                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 22, 30), 'o': 1 - seg(i, 26, 34)}
+                if i < 84:
+                    st['ring'] = {'sel': '.dv-meds', 'o': min(seg(i, 30, 38), 1 - seg(i, 78, 84)), 'pad': 6}
                 else:
-                    st['ring'] = {'sel': '[data-film="effect"]', 'o': seg(i, 98, 108), 'pad': 8}
+                    st['ring'] = {'sel': '[data-film="effect"]', 'o': seg(i, 86, 96), 'pad': 8}
             film.frame(st)
         film.close()
 
-        # ---- scene 4: Astro, the chat companion ----
-        n = SCENE_FRAMES[3]
+        # ---- scene 5: Astro, the chat companion ----
+        n = SCENE_FRAMES[4]
         go('#astro')
         yb = top_for('section.chat', HB + 10)
         ev('y => window.scrollTo(0, y)', yb)
-        film.open(4)
+        film.open(5)
         # (frame, selector to press): a quick reply, the check-in, then three ratings
-        steps = [(30, '[data-action="chat-say"]'), (72, '[data-action="chat-checkin"]'), (92, '[data-action="chat-rate"][data-value="4"]'),
-                 (106, '[data-action="chat-rate"][data-value="7"]'), (120, '[data-action="chat-rate"][data-value="6"]')]
+        steps = [(26, '[data-action="chat-say"]'), (62, '[data-action="chat-checkin"]'), (80, '[data-action="chat-rate"][data-value="4"]'),
+                 (92, '[data-action="chat-rate"][data-value="7"]'), (104, '[data-action="chat-rate"][data-value="6"]')]
         done = 0
         pos = (VW * 0.6, VH * 0.32)
         target = center(steps[0][1])
-        move_from = 8
+        move_from = 6
         for i in range(n):
-            st = {'scrollY': yb, 'sub': SUBS[3], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
+            st = {'scrollY': yb, 'sub': SUBS[4], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
             if done < len(steps):
                 at, sel = steps[done]
                 t = seg(i, move_from, at - 3)
@@ -365,13 +400,13 @@ def main():
                     if done < len(steps):
                         target = center(steps[done][1])
             else:
-                st['cur'] = {'x': pos[0], 'y': pos[1], 'o': 1 - seg(i, 122, 130)}
-                st['ring'] = {'sel': '.thread .msg-astro:last-child .msg-text', 'o': seg(i, 128, 138), 'pad': 6}
+                st['cur'] = {'x': pos[0], 'y': pos[1], 'o': 1 - seg(i, 106, 112)}
+                st['ring'] = {'sel': '.thread .msg-astro:last-child .msg-text', 'o': seg(i, 110, 120), 'pad': 6}
             film.frame(st)
         film.close()
 
-        # ---- scene 5: Space, the real NASA data ----
-        n = SCENE_FRAMES[4]
+        # ---- scene 6: Space, the real NASA data ----
+        n = SCENE_FRAMES[5]
         go('#environment')
         page.clock.run_for(2600)  # the cabin feed connects and the screen redraws
         ev("() => document.querySelector('[data-action=\"toggle-replay\"]').click()")
@@ -380,74 +415,74 @@ def main():
         e1 = top_for(sec(2), HB + 10)
         e2 = top_for(sec(3), HB + 10)
         e3 = top_for(sec(4), HB + 10)
-        film.open(5)
+        film.open(6)
         for i in range(n):
-            st = {'sub': SUBS[4], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
-            if i < 56:
+            st = {'sub': SUBS[5], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
+            if i < 50:
                 st['scrollY'] = e1
-                if i >= 12:
-                    st['ring'] = {'sel': f'{sec(2)} .banner-warn', 'o': min(seg(i, 12, 20), 1 - seg(i, 50, 56)), 'pad': 6}
-            elif i < 108:
-                st['scrollY'] = lerp(e1, e2, seg(i, 56, 72))
-                if i >= 76:
-                    st['ring'] = {'sel': f'{sec(3)} svg.chart', 'o': min(seg(i, 76, 84), 1 - seg(i, 102, 108)), 'pad': 4}
+                if i >= 10:
+                    st['ring'] = {'sel': f'{sec(2)} .banner-warn', 'o': min(seg(i, 10, 18), 1 - seg(i, 44, 50)), 'pad': 6}
+            elif i < 98:
+                st['scrollY'] = lerp(e1, e2, seg(i, 50, 64))
+                if i >= 68:
+                    st['ring'] = {'sel': f'{sec(3)} svg.chart', 'o': min(seg(i, 68, 76), 1 - seg(i, 92, 98)), 'pad': 4}
             else:
-                st['scrollY'] = lerp(e2, e3, seg(i, 108, 124))
+                st['scrollY'] = lerp(e2, e3, seg(i, 98, 112))
                 # the render machine is offline, so say on screen that these values were recorded
-                st['note'] = {'text': "Values recorded from NASA's live ISS feed, 14 Nov 2026", 'o': min(seg(i, 112, 122), 1 - seg(i, n - 8, n - 2))}
-                if i >= 130:
-                    st['ring'] = {'sel': f'{sec(4)} table', 'o': seg(i, 130, 138), 'pad': 6}
+                st['note'] = {'text': "Values recorded from NASA's live ISS feed, 14 Nov 2026", 'o': min(seg(i, 102, 112), 1 - seg(i, n - 8, n - 2))}
+                if i >= 118:
+                    st['ring'] = {'sel': f'{sec(4)} table', 'o': seg(i, 118, 126), 'pad': 6}
             film.frame(st)
         film.close()
 
-        # ---- scene 6: a report crosses the signal delay to the flight surgeon ----
-        n = SCENE_FRAMES[5]
+        # ---- scene 7: a report crosses the signal delay to the flight surgeon ----
+        n = SCENE_FRAMES[6]
         go('#surgeon')
         ye = top_for('form[data-form="send-report"]', HB + 60)
         ev('y => window.scrollTo(0, y)', ye)
         bx, by = center('form[data-form="send-report"] button[type="submit"]')
         start = (VW * 0.66, VH * 0.3)
-        film.open(6)
+        film.open(7)
         sent = False
         jumped = False
         yf = 0
         for i in range(n):
-            st = {'scrollY': ye, 'sub': SUBS[5], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
-            if i < 20:
-                t = seg(i, 4, 18)
+            st = {'scrollY': ye, 'sub': SUBS[6], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
+            if i < 18:
+                t = seg(i, 4, 16)
                 st['cur'] = {'x': lerp(start[0], bx, t), 'y': lerp(start[1], by, t)}
-            elif i < 70:
+            elif i < 60:
                 if not sent:
                     ev("() => document.querySelector('form[data-form=\"send-report\"]').requestSubmit()")
                     time.sleep(0.15)
                     sent = True
-                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 20, 28), 'o': 1 - seg(i, 24, 30)}
-                st['scrollY'] = lerp(ye, ye + 90, seg(i, 30, 42))
-                if i >= 42:
-                    st['ring'] = {'sel': 'form[data-form="send-report"] ~ ul.plain li:first-child', 'o': min(seg(i, 42, 50), 1 - seg(i, 64, 70)), 'pad': 7}
+                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 18, 26), 'o': 1 - seg(i, 22, 28)}
+                st['scrollY'] = lerp(ye, ye + 90, seg(i, 26, 36))
+                if i >= 36:
+                    st['ring'] = {'sel': 'form[data-form="send-report"] ~ ul.plain li:first-child', 'o': min(seg(i, 36, 44), 1 - seg(i, 54, 60)), 'pad': 7}
             else:
                 if not jumped:
                     page.clock.run_for(22000)  # the report arrives on the ground
                     time.sleep(0.1)
                     yf = top_for('.console', HB + 10)
                     jumped = True
-                st['fade'] = 1 - seg(i, 70, 76)
+                st['fade'] = 1 - seg(i, 60, 66)
                 st['scrollY'] = yf
-                if i >= 82:
-                    st['ring'] = {'sel': '.console details.report', 'o': seg(i, 82, 92), 'pad': 6}
+                if i >= 70:
+                    st['ring'] = {'sel': '.console details.report', 'o': seg(i, 70, 80), 'pad': 6}
             film.frame(st)
         film.close()
 
-        # ---- scene 7: where each limit comes from, then the end card ----
-        n = SCENE_FRAMES[6]
+        # ---- scene 8: where each limit comes from, then the end card ----
+        n = SCENE_FRAMES[7]
         go('#about')
         ev("() => window.__film.tag('section.card', 'Where each limit comes from', 'limits')")
         yi = top_for('[data-film="limits"] table', HB + 14)
-        film.open(7)
+        film.open(8)
         for i in range(n):
-            o = seg(i, 46, 60)
-            film.frame({'scrollY': yi, 'sub': SUBS[6], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6),
-                        'ring': {'sel': '[data-film="limits"] table', 'o': min(seg(i, 8, 16), 1 - seg(i, 40, 46)), 'pad': 6} if 8 <= i < 46 else None,
+            o = seg(i, 38, 50)
+            film.frame({'scrollY': yi, 'sub': SUBS[7], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6),
+                        'ring': {'sel': '[data-film="limits"] table', 'o': min(seg(i, 6, 14), 1 - seg(i, 32, 38)), 'pad': 6} if 6 <= i < 38 else None,
                         'card': {'kind': 'end', 'o': o} if o > 0 else None})
         film.close()
         browser.close()

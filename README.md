@@ -8,6 +8,16 @@ Built for the 2026 NASA Space Apps Challenge: **Create Health Monitoring Softwar
 
 **Live demo:** https://dhirajk8113.github.io/astro-health-companion/ (a first visit opens with the simulated demo data loaded)
 
+**Demo video, 30 seconds:** https://dhirajk8113.github.io/astro-health-companion/media/aeronyx-demo.mp4
+
+![The AeroNYX home screen inside the concept device: one gauge per reading against its safe range](media/home.jpg)
+
+| Astro, the chat companion | A sample run | Real NASA data |
+| --- | --- | --- |
+| ![Astro answering a check-in](media/astro.jpg) | ![Results of a simulated blood sample](media/sample.jpg) | ![The Space screen replaying the May 2024 solar storm](media/space.jpg) |
+
+These are screenshots of the running app. The device around the screen is a concept, drawn in code with an AI assistant from the team's sketch. No hardware exists.
+
 > AeroNYX is a health monitor and Astro is its chat companion. Neither is a doctor or a therapist, and neither diagnoses or treats. The demo readings are simulated, except the radiation dose.
 
 ## What it does
@@ -24,6 +34,18 @@ Built for the 2026 NASA Space Apps Challenge: **Create Health Monitoring Softwar
 | Setup | Enter preflight baselines, choose the mission, and load or clear the simulated demo data. |
 
 AeroNYX follows 13 indicators: resting heart rate, blood pressure, body temperature, body mass (from the mass measurement device), aerobic capacity, fasting glucose, vitamin D, blood potassium, urine volume, urinary calcium, mission radiation dose, sleep and mood.
+
+## One case, start to finish
+
+The demo data carries one case through the whole loop. It is simulated, and it shows what the software is built to do.
+
+1. A crew member's urinary calcium climbs over four weeks. AeroNYX shows the trend against the range and the crew member sends a report.
+2. The report crosses the signal delay. The flight surgeon replies with a prescription from the onboard kit: potassium citrate, 20 mEq a day.
+3. AeroNYX tracks each dose. About nine in ten are taken.
+4. Urinary calcium averages 9 percent lower since the medication started. AeroNYX states this as a trend, not as proof of cause, and the flight surgeon sees the same numbers.
+5. Today urine volume is 1.4 L, under the 1.5 L line where NASA says kidney stone risk increases. AeroNYX flags it, says to increase fluids and to tell the flight surgeon.
+
+The five-step tour on the home screen walks through the same loop.
 
 ## Boundaries
 
@@ -97,6 +119,16 @@ The three background research reports in `docs/research/` list every source cons
 - **NASA limits:** six of the 13 indicators use a number NASA publishes (table above).
 - **Standard clinical values:** the other seven. NASA publishes no numeric in-flight limit for them, so the ranges are standard adult values used on Earth, labelled as such on screen. A flight surgeon would set the real limits for each crew member.
 - **Not included:** stool analysis, which has no in-flight analyzer today.
+
+## Could this work?
+
+- **The readings exist.** Every indicator is something crews already measure or that has flown. The sample submitter assumes an onboard analyser of the kind the Canadian Space Agency's Bio-Analyzer provides on the ISS, which works from a small sample.
+- **The medications exist.** Eight of the kit items use the names and strengths in NASA's 2015 ISS medical kit list.
+- **The limits are NASA's where NASA has one.** Six of the 13 safe ranges come from NASA-STD-3001 or a NASA brief, each linked to its document. The other seven are standard clinical ranges and say so.
+- **The logic is checked.** 65 automated tests cover the status rules, the gauges, the medication comparison and Astro. They include a test that the green band on every gauge is the range the rules call in range, and tests that crisis wording always hands off to people.
+- **It runs with no link to Earth.** There is no server and no AI model inside the product. Only the two live NASA panels need a connection, and they say so when there is none.
+
+What is not done: no hardware, no connection to a real analyser or dispenser, and no clinical validation. Astro picks its replies by keywords, so it can misread a sentence.
 
 ## The concept device
 
