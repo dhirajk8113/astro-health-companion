@@ -20,6 +20,11 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 - The names: AeroNYX for the device, Astro for the chat companion.
 - Astro as a calming companion to talk to about stress, with a mental health check-in inside the chat.
 - The judgement that the first screens had too much text, and the choice of the gauge home screen from three looks the assistant drew.
+- The judgement that the screens were still too wordy, and the choice of look A (gauges with icons and fewer words) from three more looks the assistant drew.
+- Astro as a character that actually speaks to the crew, in one of three forms the team named: a character, a sprite or a speech bubble.
+- A radiation warning bar on the Space screen that shows the level and warns when the dose reaches a hazardous limit, and a Space screen made of graphics instead of text.
+- A badge scan and a PIN, so that health information stays private.
+- Showing the onboard kit as a plain list, removing the line about who chooses medications, and removing the per-screen demo notes.
 
 **What the AI assistant did**
 
@@ -63,13 +68,17 @@ Times are US Central.
 | Nov 15, 09:15 to 09:25 | At the team's direction, changed the spelling of the device name to AeroNYX everywhere it is shown, and filmed the video again | The app, the README, `tools/film-demo.py`, the project demo link | As above |
 | Nov 15, 11:55 to 12:05 | After an audit against the five judging criteria, at the team's direction to close every gap: widened Astro's crisis word list and added a handoff for threats to others; a NASA tag and live space weather on the home screen; a simulated sample run for the sample submitter; a demo tour; long explanations moved behind "More"; tables and the readings list fixed for phones | `js/lib/checkin.js`, `js/lib/chat.js`, `js/lib/sample.js`, `js/views.js`, `js/app.js`, `css/styles.css`, `tests/astro.test.mjs` | The sample screen says the analysis is simulated; disclosure comment in each file; this log |
 | Nov 15, 12:05 to 12:15 | Re-filmed the demo video with a sample-run scene, published it on the site, and added four screenshots and two sections (one case, feasibility) to the README | `tools/film-demo.py`, `media/`, `README.md`, the project demo link | An "AI-generated video" watermark on every frame; on-screen notes for the concept device, the simulated analysis and the recorded cabin values; a line under the screenshots; this log |
+| Nov 15, 15:35 to 16:00 | At the team's direction: look A on the home screen (an icon per reading, counts as symbols); the Space screen redrawn as graphics with a radiation bar against NASA's 600 mSv career limit that turns red at the limit; Astro as a speaking character with three looks, written-out replies and the tablet's own voice; a badge scan and PIN lock; the onboard kit as a plain list; per-screen demo notes removed | `js/views.js`, `js/app.js`, `js/voice.js`, `js/lib/icons.js`, `js/lib/persona.js`, `js/lib/lock.js`, `css/styles.css`, `index.html`, `tests/` | Disclosure comment in each file; "Drawn with AI" under Astro's character and sprite; "Concept device, drawn with AI" on the device; the "Demo data" label in the header; the About screen |
 
 ## How AI output is marked in the project
 
 - Every source file starts with an AI disclosure comment.
 - The About screen and the page footer state that the code was written with an AI assistant.
-- Simulated data is labelled on every screen: a "Demo data" label sits in the header of every screen, and the screens with tables repeat it in a line.
-- The concept device carries the line "Concept device, drawn with AI from the team's sketch. No hardware exists."
+- Simulated data is labelled by a "Demo data" label in the header of every screen, and by "SIMULATED DATA" in the report sent to the flight surgeon. The team asked for the notes that repeated this on each screen to be removed; the About screen keeps the full account of what is real and what is simulated.
+- The concept device carries the line "Concept device, drawn with AI". The About screen says that no hardware exists.
+- Astro's character and sprite carry the line "Drawn with AI". The bubble look has no drawing.
+- Astro's voice is the browser's built-in speech, limited to voices that run on the device. It is not an AI model and sends nothing anywhere.
+- The badge scan is simulated; the About screen says so, and says that the lock does not encrypt the stored record.
 - The Astro screen says that Astro is a scripted companion, not a person or a therapist.
 - The demo video shows "AI-generated video" on every frame, and says in its last subtitle that the readings are simulated, that the device is a concept and that the code was written with AI.
 - The screenshots in the README are pictures of the running app, taken by a script. The home screen's live space weather label is left out of them and of the video, because the machine that takes them is offline.

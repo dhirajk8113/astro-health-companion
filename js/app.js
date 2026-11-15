@@ -11,8 +11,11 @@ import { chatReply, parseRating, CHECKIN_STEPS } from './lib/chat.js';
 import { usesSampleSubmitter } from './lib/device.js';
 import { PANELS, simulateSample } from './lib/sample.js';
 import { initDevice } from './device.js';
+import { loadLook, saveLook, loadVoicePref, saveVoicePref, speakingMs, typingStep } from './lib/persona.js';
+import { loadLock, setPin, checkPin, afterWrongPin, PIN_LENGTH, IDLE_MS, LOCK_KEY } from './lib/lock.js';
+import { hasSpeech, speak, hush } from './voice.js';
 import { loadState, saveState, clearState, isFirstVisit, newId } from './lib/store.js';
-import { viewToday, viewReadings, viewMeds, viewAstro, viewSample, viewSurgeon, viewSetup, viewAbout, viewEnvironment } from './views.js';
+import { viewToday, viewReadings, viewMeds, viewAstro, viewSample, viewSurgeon, viewSetup, viewAbout, viewEnvironment, viewLock } from './views.js';
 import { fetchDonki } from './lib/spaceweather.js';
 import { connectIss } from './lib/isslive.js';
 
@@ -25,13 +28,17 @@ if (isFirstVisit()) {
 }
 // flow: the check-in question Astro is waiting on, while one is being asked in the chat.
 // sample: a run of the sample submitter, while it is analysing or showing results.
-const ui = { flow: null, sample: null, confirmClear: false, breathing: null };
+// look, voice: how Astro appears and whether it reads its lines aloud.
+// fresh: the id of a line Astro has just said and has yet to act out.
+const ui = {
+  flow: null, sample: null, confirmClear: false, breathing: null,
+  look: loadLook(window.localStorage), voice: loadVoicePref(window.localStorage), fresh: null, greeted: false,
+};
 
-// The demo tour on the home screen can be hidden for good.
-const TOUR_KEY = 'aeronyx.tour.v1';
-function tourOn() {
-  try { return window.localStorage.getItem(TOUR_KEY) !== 'off'; } catch (err) { return true; }
-}
+// The tablet opens locked: a badge scan, then a PIN. savedLock is null until a PIN is created.
+const lock = { on: true, stage: 'badge', entry: '', error: '', tries: 0, waitUntil: 0, scanning: false, busy: false, confirmReset: false };
+let savedLock = loadLock(window.localStorage);
+let idleTimer = 0;
 
 // Real NASA data that lives outside the saved state: space weather from DONKI
 // and the live ISS cabin feed. Neither is stored on the device.
@@ -124,6 +131,13 @@ function restoreFields({ kept, focus, open }) {
 }
 
 function render({ keepFields = false } = {}) {
+  stopAct();
+  document.documentElement.dataset.locked = lock.on ? 'on' : 'off';
+  if (lock.on) {
+    const wait = Math.max(0, Math.ceil((lock.waitUntil - Date.now()) / 1000));
+    main.innerHTML = viewLock(state, { ...lock, waitSeconds: wait });
+    return;
+  }
   const r = route();
   syncEnvironment(r.name);
   const saved = keepFields ? captureFields() : null;
@@ -131,13 +145,13 @@ function render({ keepFields = false } = {}) {
   switch (r.name) {
     case 'readings': html = viewReadings(state, r.arg); break;
     case 'meds': html = viewMeds(state, nowISO()); break;
-    case 'astro': html = viewAstro(state, { flow: ui.flow }); break;
+    case 'astro': html = viewAstro(state, { flow: ui.flow, look: ui.look, voice: ui.voice, canSpeak: hasSpeech() }); break;
     case 'sample': html = viewSample(state, { sample: ui.sample }); break;
     case 'surgeon': html = viewSurgeon(state, nowISO()); break;
     case 'setup': html = viewSetup(state); break;
     case 'about': html = viewAbout(); break;
     case 'environment': html = viewEnvironment(state, env, nowISO()); break;
-    default: html = viewToday(state, env, { tour: Boolean(state.profile.simulated) && tourOn() });
+    default: html = viewToday(state, env);
   }
   main.innerHTML = html;
   if (saved) restoreFields(saved);
@@ -156,6 +170,158 @@ function render({ keepFields = false } = {}) {
     const btn = main.querySelector('[data-action="clear-all"]');
     if (btn) btn.textContent = 'Press again to clear everything';
   }
+  if (r.name === 'astro') perform();
+}
+
+// ---------- Astro speaks ----------
+
+// The line Astro is acting out: its timers. Replaced whenever the screen is redrawn.
+let act = null;
+
+function stopAct() {
+  if (!act) return;
+  window.clearInterval(act.typing);
+  window.clearTimeout(act.done);
+  act = null;
+}
+
+// Astro says a new line: it is written out in the speech bubble, the character
+// talks, and the tablet's own voice reads it aloud when the voice is on.
+function perform() {
+  const lineEl = main.querySelector('[data-astro-line]');
+  const stage = main.querySelector('[data-astro-stage]');
+  if (!lineEl || !stage) return;
+  const id = lineEl.dataset.id;
+  const greeting = id === 'opening' && !ui.greeted;
+  if (ui.fresh !== id && !greeting) return;
+  ui.fresh = null;
+  if (id === 'opening') ui.greeted = true;
+  const text = lineEl.textContent;
+  const mine = { typing: 0, done: 0 };
+  act = mine;
+  stage.classList.add('is-speaking');
+  let written = false;
+  let spoken = false;
+  const settle = () => {
+    if (act !== mine || !written || !spoken) return;
+    stopAct();
+    stage.classList.remove('is-speaking');
+  };
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (calm) {
+    written = true;
+  } else {
+    // The whole line stays in place, unseen, so the bubble keeps its size while the words appear.
+    lineEl.innerHTML = '<span class="sr-only"></span><span class="type-ghost" aria-hidden="true"></span><span class="type-out" aria-hidden="true"></span>';
+    lineEl.children[0].textContent = text;
+    lineEl.children[1].textContent = text;
+    const out = lineEl.children[2];
+    const step = typingStep(text.length);
+    let shown = 0;
+    mine.typing = window.setInterval(() => {
+      shown = Math.min(text.length, shown + step);
+      out.textContent = text.slice(0, shown);
+      if (shown >= text.length) {
+        window.clearInterval(mine.typing);
+        written = true;
+        settle();
+      }
+    }, 24);
+  }
+  const voiced = ui.voice && speak(text, () => { spoken = true; settle(); });
+  mine.done = window.setTimeout(() => { spoken = true; settle(); }, voiced ? speakingMs(text) + 4000 : Math.min(2800, speakingMs(text)));
+}
+
+// Act out whatever Astro is saying now once more, after its look or voice changes.
+function repeatLine() {
+  const el = main.querySelector('[data-astro-line]');
+  ui.fresh = el ? el.dataset.id : null;
+  if (ui.fresh === 'opening') ui.greeted = false;
+}
+
+// ---------- The lock ----------
+
+function armIdle() {
+  window.clearTimeout(idleTimer);
+  if (!lock.on) idleTimer = window.setTimeout(lockNow, IDLE_MS);
+}
+
+function lockNow() {
+  if (lock.on) return;
+  hush();
+  stopBreathing();
+  ui.flow = null;
+  Object.assign(lock, { on: true, stage: 'badge', entry: '', error: '', scanning: false, busy: false, confirmReset: false });
+  render();
+  window.scrollTo(0, 0);
+}
+
+function unlock() {
+  Object.assign(lock, { on: false, entry: '', error: '', tries: 0, busy: false, confirmReset: false });
+  armIdle();
+  render();
+}
+
+function waitOut() {
+  const timer = window.setInterval(() => {
+    if (!lock.on || Date.now() >= lock.waitUntil) {
+      window.clearInterval(timer);
+      lock.error = '';
+    }
+    if (lock.on) render();
+  }, 1000);
+}
+
+async function submitPin() {
+  const pin = lock.entry;
+  const creating = lock.stage === 'create';
+  lock.busy = true;
+  render();
+  try {
+    if (creating) {
+      savedLock = await setPin(window.localStorage, pin);
+      toast('PIN set.');
+      unlock();
+      return;
+    }
+    if (await checkPin(savedLock, pin)) {
+      unlock();
+      return;
+    }
+    const next = afterWrongPin(lock.tries, Date.now());
+    Object.assign(lock, { busy: false, entry: '', error: 'Wrong PIN', tries: next.tries, waitUntil: next.waitUntil });
+    render();
+    if (next.waitUntil) waitOut();
+  } catch (err) {
+    if (creating) {
+      // This browser cannot keep a PIN (no storage, or no way to hash it): open without one.
+      toast('This browser cannot store a PIN, so the tablet is open.');
+      unlock();
+    } else {
+      Object.assign(lock, { busy: false, entry: '', error: 'The PIN could not be checked. Try again.' });
+      render();
+    }
+  }
+}
+
+function pressDigit(d) {
+  if (!lock.on || lock.busy || Date.now() < lock.waitUntil || !/^\d$/.test(String(d))) return;
+  if (lock.stage !== 'pin' && lock.stage !== 'create') return;
+  lock.entry = (lock.entry + d).slice(0, PIN_LENGTH);
+  lock.error = '';
+  lock.confirmReset = false;
+  render();
+  if (lock.entry.length === PIN_LENGTH) submitPin();
+}
+
+function scanBadge() {
+  if (!lock.on || lock.scanning || lock.stage !== 'badge') return;
+  lock.scanning = true;
+  render();
+  window.setTimeout(() => {
+    Object.assign(lock, { scanning: false, stage: savedLock ? 'pin' : 'create', entry: '', error: '' });
+    render();
+  }, 1100);
 }
 
 function stopBreathing() {
@@ -202,7 +368,9 @@ function sendReport(note, auto) {
 // ---------- Astro, the chat companion ----------
 
 function say(from, text, extra = {}) {
-  state.chat.push({ id: newId('m'), from, t: nowISO(), text, ...extra });
+  const id = newId('m');
+  if (from === 'astro') ui.fresh = id;
+  state.chat.push({ id, from, t: nowISO(), text, ...extra });
   if (state.chat.length > 80) state.chat = state.chat.slice(-80);
 }
 
@@ -345,10 +513,6 @@ const actions = {
     toast(`${rx.name} added to your schedule.`);
     render();
   },
-  'tour-off': () => {
-    try { window.localStorage.setItem(TOUR_KEY, 'off'); } catch (err) { /* the tour simply shows again next time */ }
-    render();
-  },
   // The sample submitter: a simulated analysis that logs one reading per indicator in the panel.
   'run-sample': (el) => {
     const kind = el.dataset.kind;
@@ -388,8 +552,42 @@ const actions = {
   'chat-clear': () => {
     state.chat = [];
     ui.flow = null;
+    hush();
     persist();
     render();
+  },
+  'astro-look': (el) => {
+    ui.look = el.dataset.look;
+    saveLook(window.localStorage, ui.look);
+    repeatLine();
+    render();
+  },
+  'astro-voice': () => {
+    ui.voice = !ui.voice;
+    saveVoicePref(window.localStorage, ui.voice);
+    if (ui.voice) repeatLine(); else hush();
+    render();
+  },
+  'lock-scan': () => scanBadge(),
+  'lock-key': (el) => pressDigit(el.dataset.digit),
+  'lock-back': () => {
+    lock.entry = lock.entry.slice(0, -1);
+    lock.error = '';
+    render();
+  },
+  // A forgotten PIN cannot be recovered: the only way back in erases the tablet.
+  'lock-reset': () => {
+    if (!lock.confirmReset) {
+      lock.confirmReset = true;
+      render();
+      return;
+    }
+    clearState();
+    try {
+      window.localStorage.removeItem(LOCK_KEY);
+      window.localStorage.removeItem('aeronyx.seen.v1');
+    } catch (err) { /* nothing stored */ }
+    window.location.reload();
   },
   'start-breathing': () => startBreathing(),
   'activity-done': (el) => {
@@ -452,7 +650,7 @@ const forms = {
     const delay = commDelay(state.profile.mission);
     const message = {
       id: newId('in'),
-      from: 'Flight surgeon (demo)',
+      from: 'Flight surgeon',
       sentAt: nowISO(),
       deliverAt: new Date(Date.now() + delay.demoSeconds * 1000).toISOString(),
       text,
@@ -517,8 +715,21 @@ main.addEventListener('input', (event) => {
   }
 });
 
+// The lock button in the header, digits typed on a keyboard, and the idle timer.
+document.addEventListener('click', (event) => {
+  if (event.target.closest('[data-lock-now]')) lockNow();
+});
+document.addEventListener('keydown', (event) => {
+  if (!lock.on) return;
+  if (/^\d$/.test(event.key)) pressDigit(event.key);
+  else if (event.key === 'Backspace' && !lock.busy) { lock.entry = lock.entry.slice(0, -1); lock.error = ''; render(); }
+  else if (event.key === 'Enter') scanBadge();
+});
+['pointerdown', 'keydown', 'input'].forEach((type) => document.addEventListener(type, armIdle, { passive: true }));
+
 window.addEventListener('hashchange', () => {
   stopBreathing();
+  hush();
   ui.confirmClear = false;
   if (route().name !== 'astro') ui.flow = null;
   if (route().name !== 'sample' && ui.sample && ui.sample.state === 'done') ui.sample = null;

@@ -17,6 +17,9 @@ import { OPENING } from './lib/chat.js';
 import { gaugeFor, gaugePosition } from './lib/gauge.js';
 import { PANELS } from './lib/sample.js';
 import { lineChart } from './lib/chart.js';
+import { icon } from './lib/icons.js';
+import { LOOKS, LOOK_NAMES, DEFAULT_LOOK, personaSvg } from './lib/persona.js';
+import { PIN_LENGTH } from './lib/lock.js';
 
 export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -59,15 +62,14 @@ function fmtDelta(indicator, delta) {
   return `${sign}${delta.pct.toFixed(1)}% from baseline`;
 }
 
-function simulatedBanner(state) {
-  if (!state.profile.simulated) return '';
-  const real = state.readings.some((r) => r.source === 'radlab');
-  return `<div class="banner banner-sim" role="note"><strong>Simulated data.</strong> Invented for the demo${real ? ', with one exception: the radiation dose is real ISS detector data from NASA' : ''}.</div>`;
-}
-
 // Secondary text sits behind a disclosure, so each screen can be read at a glance.
 function more(label, html) {
   return `<details class="more"><summary>${esc(label)}</summary>${html}</details>`;
+}
+
+// A sentence that explains, behind an "i" button, so the screen itself stays numbers and pictures.
+function info(html, label = 'More about this') {
+  return `<details class="more info"><summary aria-label="${esc(label)}" title="${esc(label)}">${icon('info', 18)}</summary><div class="info-body">${html}</div></details>`;
 }
 
 function sourceLinks(sources) {
@@ -84,10 +86,11 @@ function gaugeRow(item, baselines) {
   const gauge = gaugeFor(indicator, baselines[indicator.id]);
   const href = `#readings/${esc(indicator.id)}`;
   // Marks the readings whose safe range is NASA's own published limit.
-  const nasa = String(indicator.limitSource).startsWith('nasa') ? ' <span class="tag-nasa" title="The safe range is NASA\'s published limit">NASA</span>' : '';
+  const nasa = String(indicator.limitSource).startsWith('nasa') ? '<span class="tag-nasa" title="The safe range is NASA\'s published limit">NASA</span>' : '';
+  const name = `<span class="gauge-name">${icon(indicator.id, 18)}${esc(gauge.short)}${nasa}</span>`;
   if (!assessment) {
     return `<a class="gauge gauge-none" href="${href}">
-      <span class="gauge-top"><span class="gauge-name">${esc(gauge.short)}${nasa}</span><span class="gauge-value muted">No reading yet</span></span>
+      <span class="gauge-top">${name}<span class="gauge-value muted">No reading yet</span></span>
       <span class="gauge-bar" aria-hidden="true"></span>
     </a>`;
   }
@@ -96,10 +99,16 @@ function gaugeRow(item, baselines) {
     ? `<span class="gauge-band" style="left:${pos.bandLeft}%;width:${pos.bandWidth}%"></span><span class="gauge-mark" style="left:${pos.marker}%"></span>`
     : '';
   return `<a class="gauge gauge-${esc(assessment.status)}" href="${href}">
-      <span class="gauge-top"><span class="gauge-name">${esc(gauge.short)}${nasa}</span><span class="gauge-value"><strong>${esc(fmtValue(indicator, latest))}</strong> <span class="gauge-unit">${esc(gauge.unit)}</span></span></span>
+      <span class="gauge-top">${name}<span class="gauge-value"><strong>${esc(fmtValue(indicator, latest))}</strong> <span class="gauge-unit">${esc(gauge.unit)}</span></span></span>
       <span class="gauge-bar" aria-hidden="true">${bar}</span>
       <span class="sr-only">${STATUS_TEXT[assessment.status]}</span>
     </a>`;
+}
+
+// How many readings stand at each status: a symbol and a number.
+function countChip(kind, n, label) {
+  const symbol = { attention: 'warn', watch: 'watch', ok: 'ok' }[kind];
+  return `<span class="chip chip-${kind} chip-count" title="${n} ${label}">${icon(symbol, 14)}<strong>${n}</strong><span class="sr-only"> ${label}</span></span>`;
 }
 
 // Live NASA space weather, as one small label on the home screen.
@@ -107,26 +116,21 @@ function weatherChip(env) {
   if (!env || !env.donki) return '';
   const w = currentWeather(env, Date.now());
   if (w && w.summary.alert) return '';
-  if (w) return `<a class="chip chip-space" href="#environment">Space weather quiet · NASA ${w.replay ? 'replay' : 'live'}</a>`;
-  if (env.donki.status === 'loading') return '<span class="chip">Checking NASA space weather</span>';
-  if (env.donki.status === 'failed') return '<a class="chip" href="#environment">NASA space weather not reachable</a>';
+  if (w) return `<a class="chip chip-space" href="#environment" title="Space weather quiet · NASA ${w.replay ? 'replay' : 'live'}">${icon('sun', 14)}Quiet <span class="tag-nasa">NASA</span></a>`;
+  if (env.donki.status === 'loading') return `<span class="chip" title="Checking NASA space weather">${icon('sun', 14)}…</span>`;
+  if (env.donki.status === 'failed') return `<a class="chip" href="#environment" title="NASA space weather not reachable">${icon('sun', 14)}Offline</a>`;
   return '';
 }
 
-// Five steps a first-time visitor can follow through the demo.
-function tourStrip() {
-  return `<nav class="tour" aria-label="Demo tour">
-      <strong>Demo tour</strong>
-      <a href="#readings/urine_vol">1 Flagged reading</a>
-      <a href="#surgeon">2 Report it</a>
-      <a href="#meds">3 Dispense a dose</a>
-      <a href="#sample">4 Run a sample</a>
-      <a href="#astro">5 Talk to Astro</a>
-      <button type="button" class="link" data-action="tour-off" aria-label="Hide the demo tour">Hide</button>
-    </nav>`;
+// A radiation warning at the top of the home screen, when a NASA line is crossed.
+function radiationBanner(state, env) {
+  const r = radiationLevel(state, env, Date.now());
+  if (r.over) return `<a class="banner banner-alert banner-link" href="#environment" role="status">${icon('warn', 20)}<span><strong>Radiation: NASA career limit reached.</strong> ${r.dose.toFixed(1)} of ${r.limit} mSv.</span></a>`;
+  if (r.storm) return `<a class="banner banner-warn banner-link" href="#environment" role="status">${icon('warn', 20)}<span><strong>Solar particle event${r.replay ? ' (replay of May 2024)' : ''}.</strong> Shelter, then log your dosimeter.</span></a>`;
+  return '';
 }
 
-export function viewToday(state, env = null, opts = {}) {
+export function viewToday(state, env = null) {
   const items = overview(state);
   const c = counts(items);
   const any = items.some((i) => i.assessment);
@@ -138,20 +142,19 @@ export function viewToday(state, env = null, opts = {}) {
   const half = Math.ceil(sorted.length / 2);
   const column = (list) => `<div class="gauge-col">${list.map((i) => gaugeRow(i, state.profile.baselines)).join('')}</div>`;
   const chips = any
-    ? `${c.attention ? `<span class="chip chip-attention">${c.attention} ${c.attention === 1 ? 'needs' : 'need'} attention</span>` : ''}
-       ${c.watch ? `<span class="chip chip-watch">${c.watch} to watch</span>` : ''}
-       <span class="chip chip-ok">${c.ok} in range</span>
-       ${c.none ? `<span class="chip">${c.none} with no reading</span>` : ''}`
+    ? `${c.attention ? countChip('attention', c.attention, c.attention === 1 ? 'needs attention' : 'need attention') : ''}
+       ${c.watch ? countChip('watch', c.watch, 'to watch') : ''}
+       ${countChip('ok', c.ok, 'in range')}
+       ${c.none ? `<span class="chip" title="${c.none} with no reading">${c.none} –</span>` : ''}`
     : '';
 
   return `
-    ${weatherBanner(env)}
+    ${radiationBanner(state, env)}
     <div class="home-head">
       <h1>Today</h1>
       ${chips}
       ${weatherChip(env)}
     </div>
-    ${opts.tour && any ? tourStrip() : ''}
     ${any ? '' : `<section class="card">
       <h2>Start here</h2>
       <p>Add your own readings under Readings, or load 60 days of simulated data to see every screen working.</p>
@@ -159,7 +162,7 @@ export function viewToday(state, env = null, opts = {}) {
       <a class="button secondary" href="#setup">Set my baselines</a>
     </section>`}
     <div class="gauges">${column(sorted.slice(0, half))}${column(sorted.slice(half))}</div>
-    <p class="gauge-key"><span class="gauge-key-band" aria-hidden="true"></span>Green is the safe range. <span class="tag-nasa">NASA</span> marks NASA's own limit. Tap a reading for what to do.</p>`;
+    <p class="gauge-key"><span class="gauge-key-band" aria-hidden="true"></span>Safe range <span class="tag-nasa">NASA</span> NASA limit</p>`;
 }
 
 // ---------- Readings ----------
@@ -205,7 +208,6 @@ export function viewReadings(state, selectedId) {
     : '<p class="muted">No reading yet. Add the first one below.</p>';
 
   return `
-    ${simulatedBanner(state)}
     <div class="split">
       <nav class="side" aria-label="Indicators">${nav}</nav>
       <div class="main-col">
@@ -260,13 +262,13 @@ export function viewMeds(state, nowISO) {
     else if (n.dueNow) due = `<span class="pill pill-watch">! Dose due</span> <span class="muted">since ${esc(fmtWhen(n.at))}</span>`;
     else due = `<span class="muted">Next dose ${esc(fmtWhen(n.at))}</span>`;
 
-    let effect = '<p class="muted small">No in-flight indicator is linked to this medication.</p>';
+    let effect = '';
     if (linked) {
       const cmp = beforeAfter(readingsFor(state.readings, linked.id), p.start);
       if (cmp.enough) {
         const dir = cmp.diff < 0 ? 'lower' : 'higher';
-        effect = `<p class="effect"><strong>${esc(linked.name)}: ${Math.abs(cmp.pct).toFixed(0)}% ${dir} since this started.</strong> It has averaged ${cmp.after.mean.toFixed(1)} ${esc(linked.unit)}, against ${cmp.before.mean.toFixed(1)} in the four weeks before. <a href="#readings/${esc(linked.id)}">Open the chart</a></p>
-          <p class="muted small">A trend, not proof of cause (${cmp.before.n} readings before, ${cmp.after.n} after). Your flight surgeon sees the same numbers.</p>`;
+        effect = `<div class="effect"><strong>${esc(linked.name)}: ${Math.abs(cmp.pct).toFixed(0)}% ${dir} since this started.</strong> <span class="effect-nums">${cmp.before.mean.toFixed(1)} → ${cmp.after.mean.toFixed(1)} ${esc(linked.unit)}</span> <a href="#readings/${esc(linked.id)}">Chart</a>
+          ${info(`<p class="muted small">A trend, not proof of cause: the average of ${cmp.before.n} readings in the four weeks before, against ${cmp.after.n} since. Your flight surgeon sees the same numbers.</p>`, 'About this comparison')}</div>`;
       } else {
         effect = `<p class="muted small">Not enough ${esc(lowerFirst(linked.name))} readings on both sides of the start date to compare yet (${cmp.before.n} before, ${cmp.after.n} after).</p>`;
       }
@@ -296,27 +298,24 @@ export function viewMeds(state, nowISO) {
     </section>`;
   }).join('');
 
-  const kit = MEDICATIONS.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(m.defaultDose)}</td><td class="num">${state.inventory[m.id] ?? m.kitUnits}</td><td>${m.kit ? `NASA ISS medical kit, ${esc(m.kit)}` : esc(m.kitNote || '')}</td><td>${esc(m.purpose)}</td></tr>`).join('');
+  const kit = MEDICATIONS.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(m.defaultDose)}</td><td class="num">${state.inventory[m.id] ?? m.kitUnits}</td><td>${m.kit ? `<span class="tag-nasa">NASA</span> ${esc(m.kit)}` : esc(m.kitNote || '–')}</td></tr>`).join('');
+  const kitAbout = `<p class="muted small">${MEDICATIONS.filter((m) => m.kit).length} of ${MEDICATIONS.length} items appear, with that strength, in <a href="${esc(SOURCES.medKit.url)}" target="_blank" rel="noopener">NASA's ISS Medical Kit: Contents and Reference</a> of 9 April 2015; the last column names the kit section. That list is historical and is not the current formulary. Beyond Earth orbit nothing can be sent up, so every prescription comes from the kit on board. The unit counts are demo values. This is not a medical reference.</p>`;
 
   return `
-    ${simulatedBanner(state)}
+    <div class="home-head"><h1>Medications</h1></div>
+    ${active || '<section class="card"><p class="muted">No active prescriptions.</p></section>'}
     <section class="card">
-      <h1>Medications</h1>
-      <p>AeroNYX does not choose medications or doses. Your flight surgeon prescribes; AeroNYX tracks each dose and how the linked reading moved.</p>
-      <p class="muted small">Simulated dispenser: the button logs the dose and lowers the kit count.</p>
-    </section>
-    ${active || '<section class="card"><p class="muted">No active prescriptions. When your flight surgeon sends one, it appears under Flight surgeon.</p></section>'}
-    <section class="card">
-      <h2>Onboard kit <span class="tag-nasa">NASA</span></h2>
-      <p class="small">${MEDICATIONS.filter((m) => m.kit).length} of ${MEDICATIONS.length} items are listed in NASA's 2015 ISS medical kit. Beyond Earth orbit nothing can be sent up, so every prescription comes from the kit on board.</p>
-      ${more('See the kit', `<table class="t-kit"><thead><tr><th>Medication</th><th>Strength</th><th class="num">Units left</th><th>Where it is listed</th><th>Why it is carried</th></tr></thead><tbody>${kit}</tbody></table>
-      <p class="muted small">Medications marked "NASA ISS medical kit" appear, with that strength, in <a href="${esc(SOURCES.medKit.url)}" target="_blank" rel="noopener">NASA's ISS Medical Kit: Contents and Reference</a> of 9 April 2015. That list is historical and is not the current formulary. The unit counts are demo values. This is not a medical reference.</p>`)}
+      <div class="card-head">
+        <h2>Onboard kit <span class="tag-nasa">NASA</span></h2>
+        ${info(kitAbout, 'About the kit list')}
+      </div>
+      <table class="t-kit"><thead><tr><th>Medication</th><th>Strength</th><th class="num">Units left</th><th>NASA kit list</th></tr></thead><tbody>${kit}</tbody></table>
     </section>`;
 }
 
 // ---------- Astro, the chat companion ----------
 
-// A calm, simple face for Astro. Drawn here, not an image file.
+// The small face beside Astro's earlier messages. Drawn here, not an image file.
 function astroAvatar() {
   return '<svg class="astro-avatar" viewBox="0 0 48 48" aria-hidden="true"><circle class="face" cx="24" cy="24" r="22"/><circle class="eye" cx="17" cy="21" r="2.4"/><circle class="eye" cx="31" cy="21" r="2.4"/><path class="smile" d="M16 29c2.5 3 5 4.2 8 4.2s5.5-1.2 8-4.2"/></svg>';
 }
@@ -331,10 +330,21 @@ function activityBlock(a) {
     </details>`;
 }
 
+// Astro speaks from a stage: its character, and what it is saying now in a
+// speech bubble. Everything said before sits under "Earlier in this chat".
+// ui.look: 'character', 'sprite' or 'bubble'. ui.voice: whether Astro reads its lines aloud.
 export function viewAstro(state, ui = {}) {
   const chat = state.chat || [];
-  const thread = [{ from: 'astro', text: OPENING }, ...chat.slice(-40)];
-  const bubbles = thread.map((m) => (m.from === 'astro'
+  const look = LOOKS.includes(ui.look) ? ui.look : DEFAULT_LOOK;
+  const thread = [{ id: 'opening', from: 'astro', text: OPENING }, ...chat.slice(-40)];
+  const lastIsMe = thread[thread.length - 1].from === 'me';
+  let lineAt = thread.length - 1;
+  while (thread[lineAt].from !== 'astro') lineAt -= 1;
+  const line = thread[lineAt];
+  const before = lineAt > 0 && thread[lineAt - 1].from === 'me' ? thread[lineAt - 1] : null;
+  const said = lastIsMe ? thread[thread.length - 1] : before;
+  const earlier = thread.slice(0, !lastIsMe && before ? lineAt - 1 : lineAt);
+  const bubbles = earlier.map((m) => (m.from === 'astro'
     ? `<div class="msg msg-astro${m.level === LEVEL.HANDOFF ? ' msg-handoff' : ''}">${astroAvatar()}<p class="msg-text">${esc(m.text)}</p></div>`
     : `<div class="msg msg-me"><p class="msg-text">${esc(m.text)}</p></div>`)).join('');
 
@@ -351,22 +361,33 @@ export function viewAstro(state, ui = {}) {
     ? last.activities.map((id) => ACTIVITIES.find((a) => a.id === id)).filter(Boolean)
     : [];
   const activities = offered.length ? `<div class="activities">${offered.map(activityBlock).join('')}</div>` : '';
+  const handoffNow = line.level === LEVEL.HANDOFF;
   const handoff = last && last.level === LEVEL.HANDOFF ? '<p><a class="button" href="#surgeon">See the flag that was sent</a></p>' : '';
 
   const history = [...state.checkins].sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 6).map((c) => `
     <tr><td>${esc(fmtWhen(c.t))}</td><td class="num">${c.mood}</td><td class="num">${c.stress}</td><td class="num">${c.loneliness}</td><td>${esc(c.level === LEVEL.HANDOFF ? 'Handed off to people' : c.level === LEVEL.SUPPORT ? 'Support offered' : 'Steady')}</td></tr>`).join('');
   const notes = (state.notesHome || []).slice(-3).reverse().map((n) => `<li><span class="muted small">${esc(fmtWhen(n.t))}</span><br>${esc(n.text)}</li>`).join('');
 
+  const persona = personaSvg(look);
+  const looks = LOOKS.map((l) => `<button type="button" data-action="astro-look" data-look="${l}" aria-pressed="${l === look}">${LOOK_NAMES[l]}</button>`).join('');
+  const voiceOn = ui.voice !== false;
+  const voice = ui.canSpeak === false ? '' : `<button type="button" class="voice-btn" data-action="astro-voice" aria-pressed="${voiceOn}" aria-label="Astro's voice is ${voiceOn ? 'on' : 'off'}" title="Astro's voice is ${voiceOn ? 'on' : 'off'}">${icon(voiceOn ? 'sound' : 'mute', 20)}</button>`;
+
   return `
-    <section class="card chat">
-      <div class="astro-head">
-        ${astroAvatar()}
-        <div>
-          <h1>Astro</h1>
-          <p class="muted small">Here to listen, any time.</p>
+    <section class="card chat astro-${look}">
+      <div class="astro-bar">
+        <h1>Astro</h1>
+        <div class="seg" role="group" aria-label="How Astro looks">${looks}</div>
+        ${voice}
+      </div>
+      ${said ? `<p class="said"><span class="sr-only">You said: </span>${esc(said.text)}</p>` : ''}
+      <div class="stage" data-astro-stage>
+        ${persona ? `<div class="persona-wrap">${persona}<span class="ai-mark">Drawn with AI</span></div>` : ''}
+        <div class="speech${handoffNow ? ' is-handoff' : ''}" aria-live="polite">
+          ${persona ? '' : '<span class="speech-name">Astro<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></span>'}
+          <p class="speech-text" data-astro-line data-id="${esc(line.id || '')}">${esc(line.text)}</p>
         </div>
       </div>
-      <div class="thread" aria-live="polite">${bubbles}</div>
       ${scale}
       ${handoff}
       ${step ? '' : `<div class="quick">
@@ -376,18 +397,49 @@ export function viewAstro(state, ui = {}) {
         <button type="button" data-action="chat-say" data-text="I miss home">I miss home</button>
       </div>`}
       <form class="composer" data-form="chat">
-        <input type="text" name="text" maxlength="500" autocomplete="off" aria-label="Message to Astro" placeholder="${step ? 'Tap a number, or type one' : 'Tell Astro what is on your mind'}">
+        <input type="text" name="text" maxlength="500" autocomplete="off" aria-label="Message to Astro" placeholder="${step ? 'Tap a number, or type one' : 'Talk to Astro'}">
         <button type="submit" class="button">Send</button>
       </form>
-      <p class="muted small">Astro is a scripted companion, not a person or a therapist. What you type stays on this tablet. ${chat.length ? '<button class="link" data-action="chat-clear">Clear the chat</button>' : ''}</p>
+      <p class="muted small">Scripted, not a person or a therapist. What you type stays on this tablet. ${chat.length ? '<button class="link" data-action="chat-clear">Clear the chat</button>' : ''}</p>
       ${activities}
     </section>
+    ${earlier.length ? `<details class="report"><summary>Earlier in this chat</summary><div class="thread">${bubbles}</div></details>` : ''}
     <details class="report">
       <summary>Recent check-ins</summary>
       ${history ? `<table><thead><tr><th>When</th><th class="num">Mood</th><th class="num">Stress</th><th class="num">Loneliness</th><th>Astro's response</th></tr></thead><tbody>${history}</tbody></table>` : '<p class="muted">No check-ins yet.</p>'}
       <p class="muted small">Your flight surgeon sees these ratings in your report, never what you typed.</p>
     </details>
     ${notes ? `<section class="card"><h2>Notes home</h2><ul class="notes">${notes}</ul></section>` : ''}`;
+}
+
+// ---------- The lock: a badge scan, then a PIN ----------
+
+// lock.stage: 'badge' (waiting for a scan), 'create' (first use) or 'pin'.
+export function viewLock(state, lock = {}) {
+  const name = state && state.profile && state.profile.name ? state.profile.name : 'Crew member';
+  if (lock.stage !== 'pin' && lock.stage !== 'create') {
+    return `<section class="lock">
+        <div class="lock-art${lock.scanning ? ' is-scanning' : ''}" aria-hidden="true">${icon('badge', 84)}<span class="lock-beam"></span></div>
+        <h1>AeroNYX</h1>
+        <button type="button" class="button lock-scan" data-action="lock-scan"${lock.scanning ? ' disabled' : ''}>${icon('badge', 20)}${lock.scanning ? 'Reading badge' : 'Scan badge'}</button>
+      </section>`;
+  }
+  const creating = lock.stage === 'create';
+  const entry = String(lock.entry || '');
+  const waiting = lock.waitSeconds > 0;
+  const off = waiting || lock.busy ? ' disabled' : '';
+  const dots = Array.from({ length: PIN_LENGTH }, (_, k) => `<span class="pin-dot${k < entry.length ? ' on' : ''}"></span>`).join('');
+  const key = (d) => `<button type="button" class="pin-key" data-action="lock-key" data-digit="${d}"${off}>${d}</button>`;
+  const keys = `${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(key).join('')}<span></span>${key('0')}<button type="button" class="pin-key pin-back" data-action="lock-back" aria-label="Delete the last digit"${off}>${icon('back', 22)}</button>`;
+  const message = waiting ? `Too many tries. Wait ${lock.waitSeconds} s.` : (lock.error || '');
+  return `<section class="lock">
+      <p class="lock-who">${icon('badge', 20)}<strong>${esc(name)}</strong></p>
+      <h1>${creating ? 'Create a PIN' : 'Enter PIN'}</h1>
+      <div class="pin-dots${lock.error ? ' is-wrong' : ''}" role="img" aria-label="${entry.length} of ${PIN_LENGTH} digits entered">${dots}</div>
+      <p class="lock-msg" role="alert">${esc(message)}</p>
+      <div class="pin-pad">${keys}</div>
+      ${creating ? '' : `<button type="button" class="link" data-action="lock-reset">${lock.confirmReset ? 'Press again to erase this tablet' : 'Forgot PIN'}</button>`}
+    </section>`;
 }
 
 // ---------- The sample submitter ----------
@@ -415,7 +467,7 @@ export function viewSample(state, ui = {}) {
   return `
     <section class="card sample">
       <h1>Sample submitter</h1>
-      <p class="muted small">Simulated: no analyser is connected. The results are generated for the demo and logged as readings.</p>
+      ${state.profile.simulated ? '' : '<p class="muted small">Simulated analysis: no analyser is connected.</p>'}
       ${body}
     </section>`;
 }
@@ -483,12 +535,10 @@ export function viewSurgeon(state, nowISO) {
   const medOptions = MEDICATIONS.map((m) => `<option value="${esc(m.id)}">${esc(m.name)} (${esc(m.defaultDose)})</option>`).join('');
 
   return `
-    ${simulatedBanner(state)}
     <section class="card">
       <h1>Flight surgeon</h1>
-      <p>Your flight surgeon makes the medical decisions. Send a report when something needs a second pair of eyes.</p>
-      <p class="muted">${esc(delay.name)}: ${esc(delayNow(state.profile.mission, nowISO).text)}</p>
-      ${delay.oneWaySeconds >= 60 ? '<p class="banner banner-warn">At this distance a reply takes at least twice the one-way delay. For anything urgent, work through the onboard medical checklist with your crew medical officer while the report is in transit.</p>' : ''}
+      <p class="muted">${icon('signal', 16)} ${esc(delay.name)}: ${esc(delayNow(state.profile.mission, nowISO).text)}</p>
+      ${delay.oneWaySeconds >= 60 ? '<p class="banner banner-warn">A reply takes at least twice the delay. If it is urgent, start the onboard medical checklist with your crew medical officer now.</p>' : ''}
     </section>
 
     <section class="card">
@@ -508,9 +558,8 @@ export function viewSurgeon(state, nowISO) {
     </section>
 
     <section class="card console">
-      <p class="eyebrow">Demo only: the ground side</p>
+      <p class="eyebrow">Mission Control</p>
       <h2>Flight surgeon console</h2>
-      <p class="muted small">In a real mission this sits in Mission Control. It is here so one person can show both ends of the loop.</p>
       ${consoleReports}
       <form data-form="surgeon-reply">
         <label>Reply to the crew member<textarea name="text" rows="3" maxlength="2000" required></textarea></label>
@@ -600,9 +649,10 @@ export function viewAbout() {
         <li>Real and live: space weather events from NASA DONKI, cabin readings from NASA's public ISS telemetry, and the signal delay to Mars computed from JPL's planetary positions.</li>
         <li>Real and saved in the app: the May 2024 solar storm (NASA DONKI), ISS dose measurements (NASA RadLab) and the Inspiration4 crew's blood chemistry ranges (NASA OSDR).</li>
         <li>The medication dispenser is simulated. Most kit items come from NASA's 2015 ISS medical kit list; the unit counts are demo values and the list is not a medical reference.</li>
-        <li>The flight surgeon console is part of the demo so one person can show both ends of the loop.</li>
         <li>The device drawn around the screen is a concept from the team's own sketch, drawn in code with an AI assistant. No hardware exists. The medication dispenser only reacts on screen, and a run of the sample submitter generates simulated values close to the last reading and logs them as simulated.</li>
-        <li>Astro is a scripted companion. Each reply is fixed wording chosen by the words typed. It is not a person, a therapist or an AI model, and what is typed stays on the tablet.</li>
+        <li>Astro is a scripted companion. Each reply is fixed wording chosen by the words typed. It is not a person, a therapist or an AI model, and what is typed stays on the tablet. Its character and sprite are drawn with AI and marked as such. Its voice is the tablet's own built-in speech: only a voice that runs on the device is used, so nothing Astro says is sent anywhere.</li>
+        <li>The badge scan is simulated: no badge reader is connected. The PIN is real. It is kept only as a salted, stretched hash, five wrong tries pause the keypad, and the tablet locks again after five idle minutes. The lock closes the screens; it does not yet encrypt the record stored on the tablet.</li>
+        <li>The flight surgeon console stands in for Mission Control, so one person can show both ends of the loop. The medication dispenser logs a dose and lowers the kit count; no hardware moves.</li>
         <li>Limits are NASA's wherever NASA publishes a number, and each one is labelled with its source. The others are standard adult clinical values used on Earth.</li>
         <li>Blood and urine panels assume an onboard analyzer that returns results from a small sample. Stool analysis has no in-flight analyzer today and is not included.</li>
       </ul>
@@ -637,19 +687,12 @@ export function currentWeather(env, nowMs) {
   return null;
 }
 
-function weatherBanner(env) {
-  const w = currentWeather(env, Date.now());
-  if (!w || !w.summary.alert) return '';
-  const e = w.summary.alert.event;
-  return `<div class="banner banner-warn" role="status"><strong>Space weather${w.replay ? ' (replay of May 2024)' : ''}.</strong> NASA DONKI reports a solar particle event at ${esc(fmtUtc(e.t))}, seen by ${esc(e.inst)}. Follow your shelter instructions and log your dosimeter reading. <a href="#environment">Open Environment</a></div>`;
-}
-
 // One-way signal delay for the mission, right now.
 export function delayNow(mission, nowISO) {
   const m = commDelay(mission);
   if (mission === 'mars') {
     const seconds = marsLightSeconds(new Date(nowISO));
-    return { seconds, text: `${formatDelay(seconds)} each way today, computed from the positions of Earth and Mars (NASA JPL). The demo compresses this to ${m.demoSeconds} seconds.` };
+    return { seconds, text: `${formatDelay(seconds)} each way today, computed from the positions of Earth and Mars (NASA JPL). Shown here in ${m.demoSeconds} seconds.` };
   }
   return { seconds: m.oneWaySeconds, text: `about ${formatDelay(m.oneWaySeconds)} each way. ${m.note}` };
 }
@@ -667,117 +710,180 @@ function crewPanel(indicator) {
         </section>`;
 }
 
-// ---------- Environment ----------
+// ---------- Space and cabin ----------
+
+// The mission dose against NASA's career limit, and whether a NASA line is
+// crossed: the limit itself, or a solar particle event in the last 72 hours.
+export function radiationLevel(state, env, nowMs) {
+  const limit = getIndicator('dose').rules.find((r) => Number.isFinite(r.gte)).gte;
+  const list = readingsFor(state.readings, 'dose');
+  const dose = list.length ? Number(list[list.length - 1].value) : null;
+  const w = currentWeather(env, nowMs);
+  const storm = w && w.summary.alert ? w.summary.alert : null;
+  const over = dose !== null && dose >= limit;
+  return { limit, dose, pct: dose === null ? null : (dose / limit) * 100, over, storm, replay: Boolean(w && w.replay), level: over ? 'attention' : storm ? 'watch' : 'ok' };
+}
+
+// The bar across the top of the Space screen. It turns red, with what to do,
+// when the dose reaches NASA's limit, and amber during a solar particle event.
+function radiationStrip(state, env, nowMs) {
+  const r = radiationLevel(state, env, nowMs);
+  const fill = r.dose === null ? 0 : Math.max(1, Math.min(100, r.pct));
+  const marks = [0.25, 0.5, 0.75].map((f) => `<span class="rad-tick" style="left:${f * 100}%"></span>`).join('');
+  const scale = [0, 0.25, 0.5, 0.75].map((f) => `<span>${Math.round(r.limit * f)}</span>`).join('');
+  let warn = '';
+  if (r.over) {
+    warn = `<p class="rad-warn">${icon('warn', 22)}<span><strong>NASA career limit reached.</strong> Tell your crew medical officer and send a report now.</span><a class="button" href="#surgeon">Send report</a></p>`;
+  } else if (r.storm) {
+    warn = `<p class="rad-warn">${icon('warn', 22)}<span><strong>Solar particle event${r.replay ? ' (replay)' : ''}, ${Math.round(r.storm.hoursAgo)} h ago.</strong> Shelter, then log your dosimeter.</span><a class="button" href="#readings/dose">Log dose</a></p>`;
+  }
+  return `<section class="rad rad-${r.level}" role="status" data-film="rad">
+      <div class="rad-top">
+        <span class="rad-name">${icon('dose', 22)}Radiation <span class="tag-nasa">NASA</span></span>
+        <span class="rad-value">${r.dose === null ? '<span class="muted">No dosimeter reading</span>' : `<strong>${r.dose.toFixed(1)}</strong> of ${r.limit} mSv <span class="rad-pct">${r.pct < 1 ? '<1' : Math.round(r.pct)}%</span>`}</span>
+      </div>
+      <div class="rad-bar" aria-hidden="true"><span class="rad-fill" style="width:${fill.toFixed(1)}%"></span>${marks}</div>
+      <div class="rad-scale" aria-hidden="true">${scale}<span>${r.limit} limit</span></div>
+      ${warn}
+    </section>`;
+}
 
 function weatherCard(env, nowMs) {
   const w = currentWeather(env, nowMs);
-  const status = env.replay
-    ? `Replay of saved NASA DONKI data, ${DONKI_MAY_2024.range[0]} to ${DONKI_MAY_2024.range[1]}. The replay stands at ${fmtUtc(DONKI_MAY_2024.replayNow)}; the counts are for the whole month.`
-    : ({
-      live: w ? `Live from NASA DONKI, ${w.range[0]} to ${w.range[1]}.` : '',
-      loading: 'Asking NASA DONKI for the last 30 days.',
-      failed: 'NASA DONKI could not be reached just now. AeroNYX will try again in a few minutes.',
-      idle: 'Not loaded yet.',
-    })[env.donki.status];
-  let body = '';
+  const mode = env.replay ? 'Replay: May 2024' : ({ live: 'Live', loading: 'Loading', failed: 'Offline', idle: 'Offline' })[env.donki.status];
+  const range = env.replay ? DONKI_MAY_2024.range : (w ? w.range : null);
+  let body = !w && env.donki.status === 'failed' ? '<p class="muted small">NASA DONKI could not be reached. Trying again in a few minutes.</p>' : '';
   if (w) {
     const s = w.summary;
+    const top = s.strongestFlare ? String(s.strongestFlare.c) : '';
+    // Flare classes run A, B, C, M, X. Kp, the size of a geomagnetic storm, runs 0 to 9.
+    const flareSteps = ['A', 'B', 'C', 'M', 'X'].map((c) => `<span class="step${top.charAt(0).toUpperCase() === c ? ' on' : ''}">${c}</span>`).join('');
+    const kp = s.topStorm ? Math.round(s.topStorm.kp) : -1;
+    const kpSteps = Array.from({ length: 10 }, (_, k) => `<span class="step${k <= kp ? ' on' : ''}">${k}</span>`).join('');
     const events = w.sep.filter((e) => isMeasured(e) && Date.parse(e.t) <= w.at).slice(-6).reverse().map((e) => `<li>${esc(fmtUtc(e.t))}: ${esc(e.inst)}</li>`).join('');
     body = `
-      ${s.alert
-    ? `<p class="banner banner-warn"><strong>Solar particle event ${Math.round(s.alert.hoursAgo)} hours ago.</strong> Seen by ${esc(s.alert.event.inst)} at ${esc(fmtUtc(s.alert.event.t))}. Follow your shelter instructions, log your dosimeter reading under Mission radiation dose, and tell your flight surgeon.</p>`
-    : '<p><span class="pill pill-ok">✓ Quiet</span> No solar particle event in the last 72 hours.</p>'}
-      <dl class="stats">
-        <div><dt>Particle events</dt><dd>${s.particleEvents}</dd></div>
-        <div><dt>Solar flares</dt><dd>${s.flareCount}</dd></div>
-        <div><dt>Strongest flare</dt><dd>${s.strongestFlare ? esc(s.strongestFlare.c) : '–'}</dd></div>
-        <div><dt>Geomagnetic storms</dt><dd>${s.stormCount}${s.topStorm ? `, Kp ${s.topStorm.kp}` : ''}</dd></div>
-      </dl>
-      ${events ? more('Latest particle events detected by instruments', `<ul class="events small">${events}</ul>`) : ''}`;
+      <div class="tiles">
+        <div class="tile"><span class="tile-num">${icon('particle', 22)}<strong>${s.particleEvents}</strong></span><span class="tile-name">Particle events</span></div>
+        <div class="tile"><span class="tile-num">${icon('flare', 22)}<strong>${s.flareCount}</strong></span><span class="tile-name">Solar flares</span></div>
+        <div class="tile"><span class="tile-num">${icon('magnet', 22)}<strong>${s.stormCount}</strong></span><span class="tile-name">Geomagnetic storms</span></div>
+      </div>
+      <div class="scale-row"><span class="scale-name">Strongest flare <strong>${top ? esc(top) : '–'}</strong></span><span class="steps" aria-hidden="true">${flareSteps}</span></div>
+      <div class="scale-row"><span class="scale-name">Top storm <strong>${s.topStorm ? `Kp ${esc(s.topStorm.kp)}` : '–'}</strong></span><span class="steps steps-kp" aria-hidden="true">${kpSteps}</span></div>
+      ${events ? more('Particle events seen by instruments', `<ul class="events small">${events}</ul>`) : ''}`;
   }
+  const about = `<p class="muted small">${range ? `NASA DONKI, ${esc(range[0])} to ${esc(range[1])}. ` : ''}${env.replay ? `The replay stands at ${esc(fmtUtc(DONKI_MAY_2024.replayNow))}; the counts are for the whole month. ` : ''}Source: <a href="${esc(SOURCES.donki.url)}" target="_blank" rel="noopener">${esc(SOURCES.donki.label)}</a>. DONKI reports that an event happened and which instrument saw it. It carries no dose, so AeroNYX never turns an event into a dose figure. Model forecasts are left out of the alert.</p>`;
   return `
-      <h2>Space weather events <span class="tag-nasa">NASA</span></h2>
-      <p class="muted small">${esc(status)}</p>
+      <div class="card-head">
+        <h2>${icon('sun', 20)}Space weather <span class="tag-nasa">NASA</span></h2>
+        ${w ? (w.summary.alert ? '<span class="pill pill-watch">! Particle event</span>' : '<span class="pill pill-ok">✓ Quiet</span>') : ''}
+        <span class="chip">${esc(mode)}</span>
+        ${info(about, 'About the space weather data')}
+      </div>
       ${body}
-      <button class="button secondary" data-action="toggle-replay">${env.replay ? 'Back to live data' : 'Replay the May 2024 storm'}</button>
-      ${more('About this data', `<p class="muted small">Source: <a href="${esc(SOURCES.donki.url)}" target="_blank" rel="noopener">${esc(SOURCES.donki.label)}</a>. DONKI reports that an event happened and which instrument saw it. It carries no dose, so AeroNYX never turns an event into a dose figure. Model forecasts are left out of the alert.</p>`)}`;
+      <button class="button secondary" data-action="toggle-replay">${env.replay ? 'Back to live data' : 'Replay the May 2024 storm'}</button>`;
 }
 
 function doseCard(mission) {
+  const limit = getIndicator('dose').rules.find((r) => Number.isFinite(r.gte)).gte;
   const first = Date.parse(`${RADLAB_ISS.firstDay}T12:00:00Z`);
   const series = RADLAB_ISS.daily.map((value, k) => ({ t: new Date(first + k * 864e5).toISOString(), value }));
   const meanUgy = RADLAB_ISS.daily.reduce((a, b) => a + b, 0) / RADLAB_ISS.daily.length;
-  const rows = Object.entries(DOSE_RATES).map(([id, r]) => {
-    const rate = doseRateFor(id);
-    return `<tr${id === mission ? ' class="row-current"' : ''}><td>${esc(r.label)}${id === mission ? ' (your mission)' : ''}</td><td class="num">${rate.toFixed(2)} mSv</td><td class="num">${Math.round(600 / rate)} days</td></tr>`;
-  }).join('');
+  const rates = Object.entries(DOSE_RATES).map(([id, r]) => ({ id, label: r.label, rate: doseRateFor(id) }));
+  const max = Math.max(...rates.map((r) => r.rate));
+  const bars = rates.map((r) => `<div class="bar-row${r.id === mission ? ' is-current' : ''}">
+        <span class="bar-label">${esc(r.label)}${r.id === mission ? ' <span class="chip">You</span>' : ''}</span>
+        <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width:${((r.rate / max) * 100).toFixed(1)}%"></span></span>
+        <span class="bar-num"><strong>${r.rate.toFixed(2)}</strong> mSv a day · ${Math.round(limit / r.rate)} days</span>
+      </div>`).join('');
   const bases = Object.values(DOSE_RATES).map((r) => `<li><strong>${esc(r.label)}:</strong> ${esc(r.basis)} <a href="${esc(r.url)}" target="_blank" rel="noopener">Source</a></li>`).join('');
-  return `
-      <h2>Measured dose on the ISS <span class="tag-nasa">NASA</span></h2>
-      <p><strong>About ${radlabMeanMsvPerDay().toFixed(2)} mSv a day</strong> at the DOSTEL-2 detector, over ${RADLAB_ISS.daily.length} days from 15 February 2022. The demo's radiation reading replays these days.</p>
-      ${lineChart(series, { name: 'Daily absorbed dose on the ISS, micrograys' })}
-      <h3>Days to NASA's 600 mSv career limit</h3>
-      <table><thead><tr><th>Mission</th><th class="num">Per day</th><th class="num">Days to 600 mSv</th></tr></thead><tbody>${rows}</tbody></table>
-      ${more('About this data', `<p class="muted small">The detector measured an average of ${Math.round(meanUgy)} micrograys a day. With the quality factor of ${QUALITY_FACTOR.value.toFixed(2)} published for these detectors, that is about ${radlabMeanMsvPerDay().toFixed(2)} mSv a day at the detector. Daily absorbed dose in micrograys. Source: <a href="${esc(RADLAB_ISS.url)}" target="_blank" rel="noopener">${esc(RADLAB_ISS.source)}</a>, retrieved ${esc(RADLAB_ISS.retrieved)}. Quality factor: <a href="${esc(QUALITY_FACTOR.url)}" target="_blank" rel="noopener">${esc(QUALITY_FACTOR.source)}</a>.</p>
+  const about = `<p class="muted small">The DOSTEL-2 detector measured an average of ${Math.round(meanUgy)} micrograys a day over ${RADLAB_ISS.daily.length} days from 15 February 2022. With the quality factor of ${QUALITY_FACTOR.value.toFixed(2)} published for these detectors, that is about ${radlabMeanMsvPerDay().toFixed(2)} mSv a day at the detector. The chart shows daily absorbed dose in micrograys, and the radiation reading on the home screen replays these days. Source: <a href="${esc(RADLAB_ISS.url)}" target="_blank" rel="noopener">${esc(RADLAB_ISS.source)}</a>, retrieved ${esc(RADLAB_ISS.retrieved)}. Quality factor: <a href="${esc(QUALITY_FACTOR.url)}" target="_blank" rel="noopener">${esc(QUALITY_FACTOR.source)}</a>.</p>
       <ul class="small">${bases}</ul>
-      <p class="muted small">The days are plain division of NASA's career limit by the measured rate. A crew member's own dose differs from a detector reading and changes with shielding and the solar cycle, so this is a scale, not a forecast.</p>`)}`;
+      <p class="muted small">The days are plain division of NASA's career limit by the rate. A crew member's own dose differs from a detector reading and changes with shielding and the solar cycle, so this is a scale, not a forecast.</p>`;
+  return `
+      <div class="card-head">
+        <h2>${icon('dose', 20)}Dose on the ISS <span class="tag-nasa">NASA</span></h2>
+        ${info(about, 'About the dose data')}
+      </div>
+      <p class="big-stat"><strong>${radlabMeanMsvPerDay().toFixed(2)}</strong> mSv a day <span class="muted small">measured over ${RADLAB_ISS.daily.length} days</span></p>
+      ${lineChart(series, { name: 'Daily absorbed dose on the ISS, micrograys' })}
+      <h3>Dose rate, and days to the ${limit} mSv limit</h3>
+      <div class="bars">${bars}</div>`;
 }
+
+// How each cabin sensor is drawn: a marker against NASA's limit, or a tank filling up.
+const CABIN_VIEW = {
+  USLAB000059: { icon: 'thermo', short: 'Temperature', min: 12, max: 33 },
+  USLAB000058: { icon: 'dial', short: 'Pressure' },
+  USLAB000055: { icon: 'air', short: 'Carbon dioxide', min: 0, max: 6 },
+  NODE3000005: { icon: 'tank', short: 'Urine tank', fill: true },
+  NODE3000008: { icon: 'tank', short: 'Waste water', fill: true },
+  NODE3000009: { icon: 'tank', short: 'Clean water', fill: true },
+};
 
 function cabinCard(env, nowMs) {
   const iss = env.iss || { state: 'idle', values: {} };
-  const label = { pill: { ok: 'pill-ok', attention: 'pill-attention', stale: 'pill-watch' }, word: { ok: '✓ Within limit', attention: '▲ Outside limit', stale: '! Not updating', info: 'Information', none: 'Waiting' } };
-  const rows = ISS_ITEMS.map((item) => {
+  const cells = ISS_ITEMS.map((item) => {
     const v = iss.values[item.id];
+    const has = Boolean(v) && Number.isFinite(v.value);
     const age = v && Number.isFinite(v.t) ? (nowMs - v.t) / 60000 : NaN;
     const st = cabinStatus(item, v ? v.value : NaN, age);
-    return `<tr><td>${esc(item.name)}</td><td class="num">${v && Number.isFinite(v.value) ? `${v.value.toFixed(item.digits)} ${esc(item.unit)}` : '–'}</td><td>${esc(formatAge(age))}</td><td>${label.pill[st.status] ? `<span class="pill ${label.pill[st.status]}">${label.word[st.status]}</span> ` : ''}${esc(st.text)}</td></tr>`;
+    const view = CABIN_VIEW[item.id] || {};
+    let bar = '<span class="gauge-bar" aria-hidden="true"></span>';
+    if (has && view.fill) {
+      bar = `<span class="gauge-bar" aria-hidden="true"><span class="cab-fill" style="width:${Math.max(0, Math.min(100, v.value)).toFixed(0)}%"></span></span>`;
+    } else if (has && item.limit && Number.isFinite(view.min)) {
+      const pct = (x) => Math.max(0, Math.min(100, ((x - view.min) / (view.max - view.min)) * 100));
+      const lo = Number.isFinite(item.limit.lo) ? item.limit.lo : view.min;
+      bar = `<span class="gauge-bar" aria-hidden="true"><span class="gauge-band" style="left:${pct(lo).toFixed(1)}%;width:${(pct(item.limit.hi) - pct(lo)).toFixed(1)}%"></span><span class="gauge-mark" style="left:${pct(v.value).toFixed(1)}%"></span></span>`;
+    }
+    const note = st.status === 'stale' ? 'Not updating' : st.status === 'none' ? 'Waiting' : formatAge(age);
+    return `<div class="cab cab-${esc(st.status)}" title="${esc(st.text)}">
+          <span class="cab-top"><span class="cab-name">${icon(view.icon || 'dial', 18)}${esc(view.short || item.name)}</span><span class="cab-value">${has ? `<strong>${v.value.toFixed(item.digits)}</strong> ${esc(item.unit)}` : '–'}</span></span>
+          ${bar}
+          <span class="cab-note">${st.status === 'attention' ? 'Outside NASA\'s limit · ' : ''}${esc(note)}</span>
+          <span class="sr-only">${esc(st.text)}</span>
+        </div>`;
   }).join('');
-  const state = {
-    live: 'Connected to NASA\'s public ISS telemetry.',
-    connecting: 'Connecting to NASA\'s public ISS telemetry.',
-    closed: 'The ISS telemetry feed is not answering. It drops out for a few minutes on most orbits.',
-    idle: 'Not connected.',
-  }[iss.state] || '';
+  const mode = { live: 'Live', connecting: 'Connecting', closed: 'Offline', idle: 'Offline' }[iss.state] || 'Offline';
+  const about = `<p class="muted small">These are the station's own sensors, read from NASA's public ISS telemetry feed while this screen is open. The feed drops out for a few minutes on most orbits. Each value carries the time the station last sent it, and a value older than 30 minutes is not judged. The green band is the NASA-STD-3001 limit from <a href="${esc(SOURCES.eclssBrief.url)}" target="_blank" rel="noopener">NASA's life support technical brief</a>: ${esc(ISS_ITEMS.filter((i) => i.limit).map((i) => `${lowerFirst(i.name)} ${i.limit.text}`).join('; '))}. The carbon dioxide limit is a one-hour average, so a single reading is only an indication. Pressure and the tanks are shown for information. On another vehicle AeroNYX would read that vehicle's feed.</p>`;
   return `
-      <h2>Cabin air and water, live from the ISS <span class="tag-nasa">NASA</span></h2>
-      <p class="muted small">${esc(state)} ${iss.state === 'closed' ? '<button class="link" data-action="iss-reconnect">Try again</button>' : ''}</p>
-      <table class="t-cabin"><thead><tr><th>Reading</th><th class="num">Value</th><th>Last sent</th><th>Against NASA's limit</th></tr></thead><tbody>${rows}</tbody></table>
-      ${more('About this data', `<p class="muted small">These are the station's own sensors, read from NASA's public telemetry feed while this screen is open. Each value carries the time the station last sent it, and a value older than 30 minutes is not judged. The limits are NASA-STD-3001 requirements from <a href="${esc(SOURCES.eclssBrief.url)}" target="_blank" rel="noopener">NASA's life support technical brief</a>; the carbon dioxide limit is a one-hour average, so a single reading is only an indication. On another vehicle AeroNYX would read that vehicle's feed.</p>`)}`;
+      <div class="card-head">
+        <h2>${icon('air', 20)}Cabin, live from the ISS <span class="tag-nasa">NASA</span></h2>
+        <span class="chip">${mode}</span>
+        ${iss.state === 'closed' ? '<button class="link" data-action="iss-reconnect">Try again</button>' : ''}
+        ${info(about, 'About the cabin data')}
+      </div>
+      <div class="cabs" data-film="cabin">${cells}</div>`;
 }
 
 function distanceCard(mission, nowISO) {
   const date = new Date(nowISO);
   const au = earthMarsDistanceAU(date);
+  const seconds = marsLightSeconds(date);
   const mine = delayNow(mission, nowISO);
+  // Over the two orbits the one-way delay runs from about 3 to about 22 minutes.
+  const at = Math.max(0, Math.min(100, ((seconds / 60 - 3) / 19) * 100));
+  const about = `<p class="muted small">Mars is ${au.toFixed(2)} astronomical units from Earth today. Computed in the app from <a href="${esc(SOURCES.jplElements.url)}" target="_blank" rel="noopener">NASA JPL's approximate planetary positions</a>. A reply takes at least twice the one-way delay, which is why AeroNYX tells you what to do while a report is in transit. ${esc(commDelay(mission).name)}: ${esc(mine.text)}</p>`;
   return `
-      <h2>Distance from Earth <span class="tag-nasa">NASA</span></h2>
-      <p>Mars is ${Math.round(au * AU_KM / 1e6)} million km away today. A message takes <strong>${esc(formatDelay(marsLightSeconds(date)))}</strong> each way; over the two orbits that ranges from about 3 to about 22 minutes.</p>
-      <p>${esc(commDelay(mission).name)}, your mission: ${esc(mine.text)}</p>
-      ${more('About this data', `<p class="muted small">Mars is ${au.toFixed(2)} astronomical units from Earth today. Computed in the app from <a href="${esc(SOURCES.jplElements.url)}" target="_blank" rel="noopener">NASA JPL's approximate planetary positions</a>. A reply takes at least twice the one-way delay, which is why AeroNYX tells you what to do while a report is in transit.</p>`)}`;
+      <div class="card-head">
+        <h2>${icon('signal', 20)}Distance from Earth <span class="tag-nasa">NASA</span></h2>
+        ${info(about, 'About the distance')}
+      </div>
+      <div class="hop" aria-hidden="true"><span class="planet planet-earth"></span><span class="beam"><span class="pulse"></span></span><span class="planet planet-mars"></span></div>
+      <div class="hop-text"><span>Earth</span><span><strong>${esc(formatDelay(seconds))}</strong> each way</span><span>Mars</span></div>
+      <div class="range" aria-hidden="true"><span class="range-mark" style="left:${at.toFixed(1)}%"></span></div>
+      <div class="range-text"><span>3 min</span><span>${Math.round((au * AU_KM) / 1e6)} million km today</span><span>22 min</span></div>
+      <p class="small">${esc(commDelay(mission).name)}, your mission: <strong>${esc(formatDelay(mine.seconds))}</strong> each way.</p>`;
 }
 
 export function viewEnvironment(state, env, nowISO) {
   const nowMs = new Date(nowISO).getTime();
   const mission = state.profile.mission;
   return `
-    <section class="card">
-      <h1>Space and cabin</h1>
-      <p>Real NASA data on three hazards from outside the body: radiation, the closed cabin and distance from Earth.</p>
-    </section>
-    <section class="card">
-      <p class="eyebrow">Hazard: space radiation</p>
-      ${weatherCard(env, nowMs)}
-    </section>
-    <section class="card">
-      <p class="eyebrow">Hazard: space radiation</p>
-      ${doseCard(mission)}
-    </section>
-    <section class="card">
-      <p class="eyebrow">Hazard: hostile closed environment</p>
-      ${cabinCard(env, nowMs)}
-    </section>
-    <section class="card">
-      <p class="eyebrow">Hazard: distance from Earth</p>
-      ${distanceCard(mission, nowISO)}
-    </section>`;
+    <div class="home-head"><h1>Space and cabin</h1></div>
+    ${radiationStrip(state, env, nowMs)}
+    <section class="card">${weatherCard(env, nowMs)}</section>
+    <section class="card">${doseCard(mission)}</section>
+    <section class="card">${cabinCard(env, nowMs)}</section>
+    <section class="card">${distanceCard(mission, nowISO)}</section>`;
 }

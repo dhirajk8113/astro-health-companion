@@ -9,7 +9,7 @@ import { parseUpdate, issTimestampToMs, cabinStatus, formatAge, ISS_ITEMS, conne
 import { RADLAB_ISS, QUALITY_FACTOR, radlabMeanMsvPerDay, doseRateFor, DONKI_MAY_2024, I4_PANEL } from '../js/data/nasa-snapshots.js';
 import { MEDICATIONS } from '../js/data/medications.js';
 import { demoState } from '../js/data/demo.js';
-import { viewEnvironment, viewReadings, viewSurgeon, viewToday, viewMeds, delayNow } from '../js/views.js';
+import { viewEnvironment, viewReadings, viewSurgeon, viewToday, viewMeds, delayNow, radiationLevel } from '../js/views.js';
 
 const NOW = '2026-11-15T01:20:00.000Z';
 const idleEnv = () => ({ donki: { status: 'idle', data: null, at: 0 }, replay: false, iss: { state: 'idle', values: {} } });
@@ -146,7 +146,7 @@ test('kit items from the NASA list are marked, countermeasures are not', () => {
   const z = MEDICATIONS.find((m) => m.id === 'sleepaid');
   assert.equal(`${z.name} ${z.defaultDose}`, 'Zolpidem (Ambien) 10 mg');
   const html = viewMeds(demoState(NOW), NOW);
-  assert.match(html, /NASA ISS medical kit, Convenience Medication Pack/);
+  assert.match(html, /<span class="tag-nasa">NASA<\/span> Convenience Medication Pack/);
   assert.match(html, /Not in NASA&#39;s 2015 kit list/);
 });
 
@@ -154,21 +154,26 @@ test('environment screen renders in every state', () => {
   const state = demoState(NOW);
   const env = idleEnv();
   let html = viewEnvironment(state, env, NOW);
-  for (const text of ['Space weather events', 'Measured dose on the ISS', 'Cabin air and water', 'Distance from Earth', '10 minutes']) assert.ok(html.includes(text), text);
+  for (const text of ['Space weather', 'Dose on the ISS', 'Cabin, live from the ISS', 'Distance from Earth', '10 minutes']) assert.ok(html.includes(text), text);
   assert.doesNotMatch(html, /NaN|undefined/);
   env.replay = true;
   html = viewEnvironment(state, env, NOW);
-  assert.match(html, /Solar particle event 2 hours ago/);
+  assert.match(html, /Solar particle event \(replay\), 2 h ago/);
+  assert.match(html, /class="rad rad-watch"/);
   assert.match(html, /X8\.7/);
-  assert.match(viewToday(state, env), /Space weather \(replay of May 2024\)/);
+  assert.match(viewToday(state, env), /Solar particle event \(replay of May 2024\)/);
   env.replay = false;
   env.donki = { status: 'live', at: Date.parse(NOW), data: { range: ['2026-10-16', '2026-11-15'], sep: [], flareCount: 14, flares: [{ t: '2026-11-05T18:33Z', c: 'M3.5' }], storms: [{ t: '2026-10-31T18:00Z', kp: 6 }] } };
   env.iss = { state: 'live', values: { USLAB000059: { value: 23.32, t: Date.parse(NOW) - 60000 }, USLAB000055: { value: 2.435, t: Date.parse(NOW) - 12 * 864e5 } } };
   html = viewEnvironment(state, env, NOW);
-  assert.match(html, /Live from NASA DONKI, 2026-10-16 to 2026-11-15/);
-  assert.match(html, /No solar particle event in the last 72 hours/);
-  assert.match(html, /23\.3 °C/);
-  assert.match(html, /Within limit/);
+  assert.match(html, /NASA DONKI, 2026-10-16 to 2026-11-15/);
+  assert.match(html, /pill-ok">✓ Quiet/);
+  assert.match(html, /class="rad rad-ok"/);
+  assert.match(html, /<strong>23\.3<\/strong> °C/);
+  assert.match(html, /Within NASA&#39;s limit/);
+  // flare class M and a Kp 6 storm are lit on their scales
+  assert.match(html, /class="step on">M</);
+  assert.equal((html.match(/class="step on"/g) || []).length, 1 + 7);
   assert.match(html, /Not updating/);
   // quiet sun: the home screen says so in one small label, with no alert
   assert.match(viewToday(state, env), /Space weather quiet · NASA live/);
@@ -182,9 +187,35 @@ test('glucose and potassium show the Inspiration4 crew range, other readings do 
   assert.match(viewReadings(state, 'potassium'), /3\.5 to 5\.3 mmol\/L/);
   assert.doesNotMatch(viewReadings(state, 'hr'), /Inspiration4/);
   assert.match(viewReadings(state, 'dose'), /Real data\./);
-  assert.match(viewReadings(state, 'hr'), /with one exception/);
   const old = demoState(NOW);
   old.readings.forEach((r) => { r.source = 'simulated'; });
   assert.doesNotMatch(viewReadings(old, 'dose'), /Real data\./);
-  assert.doesNotMatch(viewReadings(old, 'hr'), /with one exception/);
+});
+
+test('the radiation bar warns at NASA\'s career limit, on the Space screen and on the home screen', () => {
+  const state = demoState(NOW);
+  const env = idleEnv();
+  const calm = radiationLevel(state, env, Date.parse(NOW));
+  assert.equal(calm.limit, 600);
+  assert.equal(calm.level, 'ok');
+  assert.ok(calm.dose > 0 && calm.dose < 600);
+  let html = viewEnvironment(state, env, NOW);
+  assert.match(html, /class="rad rad-ok"/);
+  assert.doesNotMatch(html, /rad-warn/);
+  assert.match(html, /<span>600 limit<\/span>/);
+  assert.doesNotMatch(viewToday(state, env), /banner-alert/);
+  // a dosimeter reading at the limit
+  state.readings.push({ id: 'hot', indicatorId: 'dose', t: NOW, value: 600, source: 'manual' });
+  const hot = radiationLevel(state, env, Date.parse(NOW));
+  assert.equal(hot.over, true);
+  assert.equal(hot.level, 'attention');
+  html = viewEnvironment(state, env, NOW);
+  assert.match(html, /class="rad rad-attention"/);
+  assert.match(html, /NASA career limit reached/);
+  assert.match(html, /href="#surgeon">Send report/);
+  assert.match(html, /style="width:100\.0%"/);
+  assert.match(viewToday(state, env), /banner-alert/);
+  // the limit outranks a particle event
+  env.replay = true;
+  assert.equal(radiationLevel(state, env, Date.parse(NOW)).level, 'attention');
 });

@@ -13,9 +13,12 @@ import { LEVEL, ACTIVITIES } from '../js/lib/checkin.js';
 import { chatReply, parseRating, CHECKIN_STEPS, OPENING, HANDOFF_TEXT } from '../js/lib/chat.js';
 import { gaugeFor, gaugePosition } from '../js/lib/gauge.js';
 import { deviceFits, loadDevicePref, saveDevicePref, usesSampleSubmitter } from '../js/lib/device.js';
-import { viewAstro, viewToday, viewReadings, viewMeds, viewSample, viewEnvironment } from '../js/views.js';
+import { viewAstro, viewToday, viewReadings, viewMeds, viewSample, viewEnvironment, viewLock } from '../js/views.js';
 import { isCrisisText } from '../js/lib/checkin.js';
 import { PANELS, simulateSample } from '../js/lib/sample.js';
+import { hasIcon, icon } from '../js/lib/icons.js';
+import { LOOKS, DEFAULT_LOOK, loadLook, saveLook, loadVoicePref, saveVoicePref, pickVoice, personaSvg, speakingMs, typingStep } from '../js/lib/persona.js';
+import { validPin, setPin, checkPin, loadLock, afterWrongPin, MAX_TRIES, WAIT_MS, LOCK_KEY } from '../js/lib/lock.js';
 
 const NOW = '2026-11-14T18:00:00.000Z';
 
@@ -161,7 +164,7 @@ test('the Astro screen shows the chat, the check-in scale, activities and the ha
   // a handoff is marked and offers no activity
   state.chat.push({ id: 'a3', from: 'astro', t: NOW, text: HANDOFF_TEXT, topic: 'crisis', level: LEVEL.HANDOFF, activities: [] });
   html = viewAstro(state);
-  assert.match(html, /msg-handoff/);
+  assert.match(html, /class="speech is-handoff"/);
   assert.match(html, /See the flag that was sent/);
   assert.doesNotMatch(html, /class="activities"/);
 });
@@ -205,7 +208,8 @@ test('the page names the device AeroNYX, the companion Astro, and labels the dev
   assert.match(page, /class="dv-brand">AeroNYX</);
   assert.match(page, /data-nav="astro" href="#astro"/);
   assert.equal((page.match(/<a data-nav="\w+" href="#\w+"/g) || []).length, 6);
-  assert.match(page, /Concept device, drawn with AI from the team's sketch\. No hardware exists\./);
+  assert.match(page, /<span>Concept device, drawn with AI<\/span>/);
+  assert.match(page, /data-lock-now/);
   assert.match(page, /Neither is a doctor or a therapist/);
   const css = readFileSync(new URL('../css/styles.css', import.meta.url), 'utf8');
   assert.match(css, /@media \(min-width: 1000px\) and \(min-height: 600px\)/);
@@ -265,7 +269,9 @@ test('a simulated sample run stays close to the last reading and inside the inpu
 test('the sample screen shows the choices, the analysis and the results, and says it is simulated', () => {
   const state = demoState(NOW);
   let html = viewSample(state);
-  assert.match(html, /Simulated: no analyser is connected/);
+  // with demo data the "Demo data" label in the header says it; without, the screen says it itself
+  assert.doesNotMatch(html, /no analyser is connected/);
+  assert.match(viewSample(emptyState()), /Simulated analysis: no analyser is connected/);
   assert.equal((html.match(/data-action="run-sample"/g) || []).length, 2);
   html = viewSample(state, { sample: { kind: 'blood', state: 'running' } });
   assert.match(html, /Analysing the blood sample/);
@@ -278,17 +284,18 @@ test('the sample screen shows the choices, the analysis and the results, and say
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
-test('the home screen marks NASA limits, carries the demo tour and stays short', () => {
+test('the home screen marks NASA limits, shows icons and counts, and stays short', () => {
   const state = demoState(NOW);
   const plain = viewToday(state);
   // six readings use a NASA limit; the key explains the tag once more
   assert.equal((plain.match(/class="tag-nasa"/g) || []).length, INDICATORS.filter((i) => String(i.limitSource).startsWith('nasa')).length + 1);
   assert.equal(INDICATORS.filter((i) => String(i.limitSource).startsWith('nasa')).length, 6);
   assert.doesNotMatch(plain, /Demo tour/);
-  const toured = viewToday(state, null, { tour: true });
-  assert.match(toured, /Demo tour/);
-  for (const href of ['#readings/urine_vol', '#surgeon', '#meds', '#sample', '#astro']) assert.ok(toured.includes(`href="${href}"`), href);
-  assert.doesNotMatch(viewToday(emptyState(), null, { tour: true }), /Demo tour/);
+  // every reading has its own icon, and the counts are a symbol and a number
+  assert.equal((plain.match(/class="gauge-name"><svg class="ico"/g) || []).length, INDICATORS.length);
+  for (const i of INDICATORS) assert.ok(hasIcon(i.id), `${i.id} has no icon`);
+  assert.match(plain, /chip-attention chip-count" title="1 needs attention"><svg/);
+  assert.match(plain, /chip-ok chip-count" title="9 in range"><svg/);
   // space weather as one label: checking, not reachable, replay alert as a banner
   assert.match(viewToday(state, { donki: { status: 'loading', data: null, at: 0 }, replay: false }), /Checking NASA space weather/);
   assert.match(viewToday(state, { donki: { status: 'failed', data: null, at: 0 }, replay: false }), /NASA space weather not reachable/);
@@ -297,14 +304,16 @@ test('the home screen marks NASA limits, carries the demo tour and stays short',
 
 test('long explanations sit behind disclosures, and blood and urine readings offer a sample run', () => {
   const state = demoState(NOW);
-  const visible = (html) => html.replace(/<details class="more">[\s\S]*?<\/details>/g, ' ').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+  const visible = (html) => html.replace(/<details class="more[^"]*">[\s\S]*?<\/details>/g, ' ').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
   const env = { donki: { status: 'idle', data: null, at: 0 }, replay: true, iss: { state: 'idle', values: {} } };
   const meds = viewMeds(state, NOW);
   const space = viewEnvironment(state, env, NOW);
-  assert.ok(visible(meds) < 330, `Medications shows ${visible(meds)} words`);
-  assert.ok(visible(space) < 420, `Space shows ${visible(space)} words`);
-  assert.ok((meds.match(/<details class="more">/g) || []).length >= 3);
-  assert.ok((space.match(/<details class="more">/g) || []).length >= 4);
+  assert.ok(visible(meds) < 300, `Medications shows ${visible(meds)} words`);
+  assert.ok(visible(space) < 240, `Space shows ${visible(space)} words`);
+  assert.ok((meds.match(/<details class="more/g) || []).length >= 3);
+  assert.ok((space.match(/<details class="more info">/g) || []).length >= 4);
+  // the kit is a plain list, not behind a disclosure
+  assert.match(meds, /<\/div>\s*<table class="t-kit">/);
   // nothing was deleted: the sources and the caveats are still in the page
   assert.match(meds, /That list is historical and is not the current formulary/);
   assert.match(space, /so AeroNYX never turns an event into a dose figure/);
@@ -312,4 +321,119 @@ test('long explanations sit behind disclosures, and blood and urine readings off
   assert.match(viewReadings(state, 'glucose'), /href="#sample"/);
   assert.match(viewReadings(state, 'urine_ca'), /href="#sample"/);
   assert.doesNotMatch(viewReadings(state, 'hr'), /href="#sample"/);
+});
+
+// ---------- Astro as a character that speaks ----------
+
+const memory = () => {
+  const store = new Map();
+  return { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+};
+
+test('Astro has three looks, remembers the chosen one, and marks AI-made drawings', () => {
+  assert.deepEqual([...LOOKS], ['character', 'sprite', 'bubble']);
+  const storage = memory();
+  assert.equal(loadLook(storage), DEFAULT_LOOK);
+  saveLook(storage, 'sprite');
+  assert.equal(loadLook(storage), 'sprite');
+  saveLook(storage, 'hologram');
+  assert.equal(loadLook(storage), 'sprite');
+  const state = demoState(NOW);
+  for (const look of LOOKS) {
+    const html = viewAstro(state, { look });
+    assert.match(html, new RegExp(`class="card chat astro-${look}"`));
+    assert.match(html, new RegExp(`data-look="${look}" aria-pressed="true"`));
+    assert.equal((html.match(/data-action="astro-look"/g) || []).length, 3);
+    // the drawn looks carry a visible AI mark; the bubble has no drawing to mark
+    assert.equal(/Drawn with AI/.test(html), look !== 'bubble');
+    assert.equal(personaSvg(look) !== '', look !== 'bubble');
+    assert.match(html, /data-astro-line data-id="opening"/);
+  }
+  assert.match(viewAstro(state, { look: 'nonsense' }), /astro-character/);
+});
+
+test('what Astro says now is in the speech bubble; what came before is under Earlier', () => {
+  const state = demoState(NOW);
+  assert.doesNotMatch(viewAstro(state), /Earlier in this chat/);
+  const reply = chatReply("I'm stressed");
+  state.chat.push({ id: 'm1', from: 'me', t: NOW, text: "I'm stressed" }, { id: 'a1', from: 'astro', t: NOW, text: reply.text, topic: reply.topic, level: reply.level, activities: reply.activities });
+  const html = viewAstro(state);
+  assert.match(html, /data-astro-line data-id="a1"/);
+  assert.match(html, /class="said"><span class="sr-only">You said: <\/span>I&#39;m stressed</);
+  assert.match(html, /Earlier in this chat/);
+  // the opening line has moved into the earlier thread, once
+  assert.equal(html.split(OPENING.replace(/'/g, '&#39;')).length - 1, 1);
+});
+
+test('the voice is on until switched off, and only a voice that runs on the tablet is used', () => {
+  const storage = memory();
+  assert.equal(loadVoicePref(storage), true);
+  saveVoicePref(storage, false);
+  assert.equal(loadVoicePref(storage), false);
+  const voices = [
+    { name: 'Google UK English Female', lang: 'en-GB', localService: false },
+    { name: 'Thomas', lang: 'fr-FR', localService: true },
+    { name: 'Daniel', lang: 'en-GB', localService: true },
+    { name: 'Samantha', lang: 'en-US', localService: true },
+  ];
+  assert.equal(pickVoice(voices).name, 'Samantha');
+  assert.equal(pickVoice(voices.slice(0, 3)).name, 'Daniel');
+  // a voice that would send the words to a server is never picked
+  assert.equal(pickVoice(voices.slice(0, 2)), null);
+  assert.equal(pickVoice([]), null);
+  assert.match(viewAstro(demoState(NOW), { voice: true }), /data-action="astro-voice" aria-pressed="true"/);
+  assert.match(viewAstro(demoState(NOW), { voice: false }), /data-action="astro-voice" aria-pressed="false"/);
+  assert.doesNotMatch(viewAstro(demoState(NOW), { canSpeak: false }), /astro-voice/);
+  assert.ok(speakingMs('x'.repeat(5000)) <= 20000);
+  assert.ok(typingStep(40) === 1 && typingStep(400) > 1);
+});
+
+// ---------- the lock ----------
+
+test('a PIN is four digits, is stored only as a salted hash, and the right one opens the lock', async () => {
+  for (const good of ['0000', '4821']) assert.equal(validPin(good), true);
+  for (const bad of ['', '123', '12345', '12a4', ' 1234']) assert.equal(validPin(bad), false, bad);
+  const storage = memory();
+  assert.equal(loadLock(storage), null);
+  const lock = await setPin(storage, '4821');
+  const raw = storage.getItem(LOCK_KEY);
+  assert.ok(!raw.includes('4821'), 'the PIN itself is stored');
+  assert.deepEqual(loadLock(storage), lock);
+  assert.equal(await checkPin(lock, '4821'), true);
+  assert.equal(await checkPin(lock, '4822'), false);
+  assert.equal(await checkPin(null, '4821'), false);
+  // the same PIN set twice does not give the same hash
+  assert.notEqual((await setPin(memory(), '4821')).hash, lock.hash);
+  await assert.rejects(setPin(memory(), '12'));
+});
+
+test('wrong PINs are counted, and the keypad rests after too many', () => {
+  let s = { tries: 0, waitUntil: 0 };
+  for (let k = 1; k < MAX_TRIES; k += 1) {
+    s = afterWrongPin(s.tries, 1000);
+    assert.equal(s.waitUntil, 0);
+  }
+  s = afterWrongPin(s.tries, 1000);
+  assert.equal(s.waitUntil, 1000 + WAIT_MS);
+  assert.equal(s.tries, 0);
+});
+
+test('the lock screen asks for a badge, then a PIN, and never shows the digits', () => {
+  const state = demoState(NOW);
+  let html = viewLock(state, { stage: 'badge' });
+  assert.match(html, /data-action="lock-scan"/);
+  assert.doesNotMatch(html, /pin-pad/);
+  assert.match(viewLock(state, { stage: 'badge', scanning: true }), /Reading badge/);
+  html = viewLock(state, { stage: 'create', entry: '12' });
+  assert.match(html, /Create a PIN/);
+  assert.equal((html.match(/class="pin-dot on"/g) || []).length, 2);
+  assert.equal((html.match(/data-action="lock-key"/g) || []).length, 10);
+  assert.doesNotMatch(html, /Forgot PIN/);
+  html = viewLock(state, { stage: 'pin', entry: '', error: 'Wrong PIN' });
+  assert.match(html, /Enter PIN/);
+  assert.match(html, /Wrong PIN/);
+  assert.match(html, /Forgot PIN/);
+  assert.match(viewLock(state, { stage: 'pin', waitSeconds: 12 }), /Wait 12 s/);
+  assert.match(viewLock(state, { stage: 'pin', confirmReset: true }), /Press again to erase this tablet/);
+  assert.ok(icon('badge').startsWith('<svg') && icon('nothing') === '');
 });
