@@ -14,9 +14,9 @@ Built for the 2026 NASA Space Apps Challenge: **Create Health Monitoring Softwar
 
 | Astro, the chat companion | A sample run | Real NASA data |
 | --- | --- | --- |
-| ![Astro answering a check-in](media/astro.jpg) | ![Results of a simulated blood sample](media/sample.jpg) | ![The Space screen replaying the May 2024 solar storm](media/space.jpg) |
+| ![Astro, as a character, answering "I'm stressed"](media/astro.jpg) | ![Results of a simulated blood sample](media/sample.jpg) | ![The Space screen: the radiation bar against NASA's limit, and NASA space weather](media/space.jpg) |
 
-These are screenshots of the running app. The device around the screen is a concept, drawn in code with an AI assistant from the team's sketch. No hardware exists.
+These are screenshots of the running app. The device around the screen is a concept, drawn in code with an AI assistant from the team's sketch. No hardware exists. In the video the same device is drawn in more detail; it is still a drawing.
 
 > AeroNYX is a health monitor and Astro is its chat companion. Neither is a doctor or a therapist, and neither diagnoses or treats. The demo readings are simulated, except the radiation dose.
 
@@ -133,7 +133,7 @@ What is not done: no hardware, no connection to a real analyser or dispenser, an
 
 ## The concept device
 
-On a wide window the app is drawn inside a device: a screen with a sample submitter on the left, a medication dispenser on the right and attachment clips on top. The shape is the team's own sketch; the drawing was made in code with an AI assistant and says so on the device. No hardware exists. Pressing the sample submitter starts a simulated sample run, and the dispenser drops a dose when one is dispensed. Neither is connected to anything. "Hide device" turns the drawing off.
+On a wide window the app is drawn inside a device: a screen with a sample submitter on the left, a medication dispenser on the right and attachment clips on top. The shape is the team's own sketch; the drawing was made in code with an AI assistant and says so on the device. No hardware exists. Pressing the sample submitter starts a simulated sample run, and the dispenser drops a dose when one is dispensed. Neither is connected to anything. "Hide device" turns the drawing off. The demo video uses a more detailed drawing of the same device (`tools/film-device.js`), in which a specimen tube goes into the sample port and a capsule drops into the cup. That is animation, not hardware.
 
 ## Run it
 
@@ -178,6 +178,7 @@ js/data/              indicators, medication kit, simulated demo data, saved NAS
 tests/                logic and screen tests
 docs/research/        background research reports
 tools/film-demo.py    script that films the demo video from the running app
+tools/film-device.js  the detailed device drawing used only in the video
 AI-USE.md             log of where and how AI was used
 ```
 
