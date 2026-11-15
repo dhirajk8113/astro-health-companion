@@ -138,7 +138,7 @@ export function demoState(nowISO, days = 60) {
     start: at(1, 9),
     end: null,
     linkedIndicator: vitd3.linkedIndicator,
-    prescriber: 'Flight surgeon (demo)',
+    prescriber: 'Flight surgeon',
     instructions: 'One capsule each morning with food.',
   });
   state.prescriptions.push({
@@ -150,7 +150,7 @@ export function demoState(nowISO, days = 60) {
     start: at(30, 9),
     end: null,
     linkedIndicator: kcit.linkedIndicator,
-    prescriber: 'Flight surgeon (demo)',
+    prescriber: 'Flight surgeon',
     instructions: 'One tablet each morning with a full drink bag of water.',
   });
 
@@ -184,7 +184,7 @@ export function demoState(nowISO, days = 60) {
 
   state.inbox.push({
     id: 'm1',
-    from: 'Flight surgeon (demo)',
+    from: 'Flight surgeon',
     sentAt: at(30, 8),
     deliverAt: at(30, 8),
     text: 'Urinary calcium has climbed over four weeks. Starting potassium citrate 20 mEq daily from the onboard kit. Keep fluids up and repeat the urine panel weekly.',

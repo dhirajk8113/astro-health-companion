@@ -24,14 +24,15 @@ These are screenshots of the running app. The device around the screen is a conc
 
 | Screen | What the crew member can do |
 | --- | --- |
-| Today | See every reading as a marker on a bar against its safe range, with the readings that need attention first and a NASA tag on the ones that use NASA's own limit. Tap one for what to do. A five-step demo tour walks a first-time visitor through the loop. |
+| Today | See every reading as a marker on a bar against its safe range, with the readings that need attention first and a NASA tag on the ones that use NASA's own limit. Tap one for what to do. |
 | Sample submitter | Run a blood sample or a 24-hour urine collection. The analysis is simulated: it logs values close to the last readings and says so. |
 | Readings | Log a reading, see it against the reference range and their own baseline, follow the trend on a chart, and read how to take the measurement and why it matters in space. |
 | Medications | See what the flight surgeon prescribed from the onboard kit, record each dose (the dispenser is simulated), follow adherence, and see how the linked reading has moved since the medication started. |
-| Astro | Talk to the chat companion about stress, sleep or missing home, do a three-question check-in by tapping numbers, get a calming activity, and be handed off to people when the ratings or the words call for it. |
-| Space | See NASA space weather events, radiation dose measured on the ISS, the station's live cabin readings and today's distance to Mars. |
+| Astro | Talk to a companion that speaks: a character, a sprite or a speech bubble that writes out each reply and reads it aloud in the tablet's own voice. Talk about stress, sleep or missing home, do a three-question check-in by tapping numbers, get a calming activity, and be handed off to people when the ratings or the words call for it. |
+| Space | See the mission radiation dose on a bar against NASA's 600 mSv career limit, with a warning when the limit is reached or a solar particle event is under way; NASA space weather as counts and scales; dose rates by mission; the station's live cabin readings as gauges; and today's signal delay to Mars. |
 | Flight surgeon | Send a structured report to the ground and receive replies and prescriptions, with the signal delay for the chosen mission (ISS, Moon or Mars). |
 | Setup | Enter preflight baselines, choose the mission, and load or clear the simulated demo data. |
+| Lock | Scan a badge (simulated) and enter a four-digit PIN. The PIN is kept only as a salted hash, five wrong tries pause the keypad, and the tablet locks after five idle minutes. The lock closes the screens; it does not yet encrypt the stored record. |
 
 AeroNYX follows 13 indicators: resting heart rate, blood pressure, body temperature, body mass (from the mass measurement device), aerobic capacity, fasting glucose, vitamin D, blood potassium, urine volume, urinary calcium, mission radiation dose, sleep and mood.
 
@@ -161,6 +162,10 @@ js/lib/assess.js      status rules, trends, adherence, report
 js/lib/checkin.js     check-in rules and handoff
 js/lib/chat.js        Astro's scripted replies
 js/lib/sample.js      the simulated sample run
+js/lib/icons.js       line icons, drawn in code
+js/lib/persona.js     Astro's three looks and its on-device voice
+js/lib/lock.js        the badge and PIN lock
+js/voice.js           speaks Astro's lines with the tablet's own voice
 js/lib/gauge.js       the gauge bars on the home screen
 js/lib/device.js      the concept device: when it is shown
 js/device.js          the concept device: wiring

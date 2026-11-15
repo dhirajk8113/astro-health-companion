@@ -44,13 +44,13 @@ test('every screen renders with no data at all', () => {
   clean(viewSetup(state), 'setup');
 });
 
-test('simulated data is labelled on every data screen', () => {
+test('simulated data is labelled once, in the page header, and in the report that travels', () => {
   const state = demoState(NOW);
   for (const html of [viewReadings(state, 'hr'), viewMeds(state, NOW), viewSurgeon(state, NOW)]) {
-    assert.match(html, /Simulated data/);
+    assert.doesNotMatch(html, /banner-sim/);
   }
-  assert.doesNotMatch(viewReadings(emptyState(), 'hr'), /Simulated data\./);
-  // The home screen carries no banner: the "Demo data" label in the page header covers every screen.
+  assert.match(viewSurgeon(state, NOW), /SIMULATED DATA/);
+  // No screen carries a banner: the "Demo data" label in the page header covers every screen.
   const page = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(page, /id="demo-chip"[^>]*hidden>Demo data</);
 });
@@ -67,7 +67,7 @@ test('today shows one gauge per reading, flagged readings first', () => {
   // every reading is drawn against its safe range, and the status is there for screen readers
   assert.equal((html.match(/class="gauge-band"/g) || []).length, INDICATORS.length);
   assert.match(html, /<span class="sr-only">Needs attention<\/span>/);
-  assert.match(html, /Green is the safe range/);
+  assert.match(html, /Safe range/);
   // far less text than the old home screen
   assert.ok(html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length < 110, 'home screen has grown wordy again');
 });
@@ -78,7 +78,7 @@ test('medication screen describes the trend without claiming cause', () => {
   assert.match(html, /Dose due/);
   assert.match(html, /lower/);
   assert.match(html, /A trend, not proof of cause/);
-  assert.match(html, /AeroNYX does not choose medications or doses/);
+  assert.doesNotMatch(html, /does not choose medications/);
 });
 
 test('flight surgeon screen shows transit, delivery and the Mars warning', () => {
