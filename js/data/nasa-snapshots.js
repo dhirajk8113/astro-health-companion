@@ -1,4 +1,4 @@
-// Aeronyx: saved copies of NASA data.
+// AeroNYX: saved copies of NASA data.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //

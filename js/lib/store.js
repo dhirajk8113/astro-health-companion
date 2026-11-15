@@ -1,4 +1,4 @@
-// Aeronyx: storage. Everything stays in this browser.
+// AeroNYX: storage. Everything stays in this browser.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 

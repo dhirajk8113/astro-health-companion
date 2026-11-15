@@ -1,4 +1,4 @@
-// Aeronyx: simulated demo data.
+// AeroNYX: simulated demo data.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //

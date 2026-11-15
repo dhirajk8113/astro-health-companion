@@ -1,4 +1,4 @@
-// Aeronyx: how long a message takes to cross to Mars today.
+// AeroNYX: how long a message takes to cross to Mars today.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //

@@ -1,4 +1,4 @@
-// Aeronyx: example onboard medical kit.
+// AeroNYX: example onboard medical kit.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //

@@ -1,4 +1,4 @@
-// Aeronyx: the gauge rows on the home screen.
+// AeroNYX: the gauge rows on the home screen.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //

@@ -1,4 +1,4 @@
-// Aeronyx: wiring for the concept device drawn around the screen.
+// AeroNYX: wiring for the concept device drawn around the screen.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 

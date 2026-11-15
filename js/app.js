@@ -1,4 +1,4 @@
-// Aeronyx: wiring between the screens and the stored state.
+// AeroNYX: wiring between the screens and the stored state.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 
