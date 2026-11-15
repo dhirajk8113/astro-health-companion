@@ -59,6 +59,7 @@ Times are US Central.
 | Nov 14, 19:17 to 19:40 | Real NASA data features: retrieved and saved the data, wrote the code and the tests | `js/data/nasa-snapshots.js`, `js/lib/spaceweather.js`, `js/lib/isslive.js`, `js/lib/ephemeris.js`, the Environment screen | Disclosure comment in each file; source and retrieval date beside each dataset; this log |
 | Nov 14, 19:40 to 20:05 | Checked the new features on the live site and fixed two labels; re-filmed the demo video with the Environment screen | `js/lib/isslive.js`, `js/views.js`, `tools/film-demo.py`, the project demo link | An "AI-generated video" watermark on every frame; an on-screen note on the recorded cabin values; this log |
 | Nov 15, 08:10 to 09:10 | From the team's sketch: three device designs and three home-screen looks for the team to pick from; then the chosen device (Aeronyx), the gauge home screen, the bottom tab bar, the rename, and Astro as a scripted chat companion with a check-in | `index.html`, `css/styles.css`, `js/views.js`, `js/app.js`, `js/device.js`, `js/lib/gauge.js`, `js/lib/chat.js`, `js/lib/device.js`, `tests/astro.test.mjs` | A line on the device saying it is a concept drawn with AI; a line under the chat saying Astro is scripted; disclosure comment in each file; this log |
+| Nov 15, 09:10 to 09:45 | Re-filmed the 30-second demo video inside the Aeronyx device, with the gauge home screen, a dispensed dose and the Astro chat | `tools/film-demo.py`, the project demo link | An "AI-generated video" watermark on every frame; on-screen notes that the device is a concept and that the cabin values are a recording; this log |
 
 ## How AI output is marked in the project
 
@@ -67,5 +68,5 @@ Times are US Central.
 - Simulated data is labelled on every screen: a "Demo data" label sits in the header of every screen, and the screens with tables repeat it in a line.
 - The concept device carries the line "Concept device, drawn with AI from the team's sketch. No hardware exists."
 - The Astro screen says that Astro is a scripted companion, not a person or a therapist.
-- The demo video shows "AI-generated video" on every frame and says in its last subtitle that the readings are simulated and the code was written with AI.
+- The demo video shows "AI-generated video" on every frame, and says in its last subtitle that the readings are simulated, that the device is a concept and that the code was written with AI.
 - The machine that renders the video has no internet access. The space weather shot therefore uses the app's own replay of the saved May 2024 storm, which the screen states. The ISS cabin shot shows values recorded from NASA's live feed on the deployed site on 14 Nov 2026, and the video says so on screen during that shot.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Films the 30-second Astro demo video from the real app running locally.
+"""Films the 30-second Aeronyx demo video from the real app running locally.
 
 AI disclosure: this script was written by an AI coding assistant (Claude).
 The video it produces is AI-made and carries a visible watermark saying so.
@@ -20,7 +20,7 @@ import datetime
 from playwright.sync_api import sync_playwright
 
 W, H, FPS = 1920, 1080, 30
-VW, VH = 1120, 630
+VW, VH = 1280, 720  # wide enough for the app to draw the concept device around the screen
 BASE = os.environ.get('FILM_BASE', 'http://127.0.0.1:8765/')
 ROOT = os.environ.get('FILM_ROOT', os.path.join(os.getcwd(), 'film-out'))
 CHROME = os.environ.get('FILM_CHROME', '/usr/bin/google-chrome')
@@ -29,14 +29,14 @@ PROBE = set(int(x) for x in sys.argv[2].split(',')) if MODE == 'probe' and len(s
 
 SUBS = [
     'A message to Mars can take 20 minutes each way.',
-    "Astro checks each reading against NASA's limits and the crew member's own baseline.",
-    'It tracks prescribed medication and how the reading moved afterwards.',
-    'A check-in offers support and hands off to people when needed.',
+    "Aeronyx shows every reading against its safe range, using NASA's limits.",
+    'It tracks each prescribed dose and how the reading moved afterwards.',
+    'Astro, the chat companion, listens, runs a check-in and hands off to people.',
     'It reads real NASA data: space weather alerts, measured radiation dose and the live ISS cabin.',
-    'Reports cross the signal delay to the flight surgeon. Doctors decide, not Astro.',
-    "Limits are NASA's. Readings are simulated. Code written with AI.",
+    'Reports cross the signal delay to the flight surgeon. Doctors decide, not Aeronyx.',
+    "Limits are NASA's. Readings are simulated. The device is a concept. Code written with AI.",
 ]
-SCENE_FRAMES = [90, 135, 120, 120, 195, 135, 90]  # 885 frames = 29.5 s
+SCENE_FRAMES = [75, 120, 150, 150, 165, 120, 105]  # 885 frames = 29.5 s
 
 # The machine that renders the video has no internet access, so the two live
 # NASA services cannot be reached while filming. Space weather is shown through
@@ -113,17 +113,17 @@ OVERLAY_JS = r"""
   const card = add('f-card', `
     <div id="f-title">
       <div class="mark">A</div>
-      <h1>Astro</h1>
-      <p class="tag">A health companion for astronauts</p>
+      <h1>Aeronyx</h1>
+      <p class="tag">Health monitoring for astronauts</p>
       <div class="link"><span class="planet earth"></span><span class="planet mars"></span><span class="signal"></span></div>
       <div class="ends"><span>Earth</span><span>Mars</span></div>
       <p class="delay">One way: up to 20 minutes</p>
     </div>
     <div id="f-end">
       <div class="mark">A</div>
-      <h1>Astro</h1>
+      <h1>Aeronyx</h1>
       <p class="url">dhirajk8113.github.io/astro-health-companion</p>
-      <p class="small">Demo readings are simulated, except the radiation dose. Code and video made with AI assistance.</p>
+      <p class="small">Concept device: no hardware exists. Demo readings are simulated, except the radiation dose.<br>Code and video made with AI assistance.</p>
     </div>`);
   const titleBox = card.querySelector('#f-title');
   const endBox = card.querySelector('#f-end');
@@ -262,8 +262,6 @@ def main():
             ev('() => window.scrollTo(0, 0)')
 
         # ---- set up the app state: demo data, Mars mission ----
-        ev("() => document.querySelector('[data-action=\"load-demo\"]').click()")
-        time.sleep(0.2)
         go('#setup')
         ev("""() => { const f = document.querySelector('form[data-form="profile"]');
                       f.querySelector('select[name="mission"]').value = 'mars'; f.requestSubmit(); }""")
@@ -277,156 +275,166 @@ def main():
         def sub_o(i, n):
             return min(1.0, i / 4, (n - 1 - i) / 4)
 
-        # ---- scene 1: title card, then the Today screen ----
+        # Content starts under the app's header, which sits inside the device's screen.
+        HB = rect('header.top')['y'] + rect('header.top')['h']
+
+        # ---- scene 1: title card ----
         n = SCENE_FRAMES[0]
         film.open(1)
         for i in range(n):
-            o = 1 - seg(i, 68, 84)
+            o = 1 - seg(i, 58, 72)
             film.frame({'scrollY': 0, 'sub': SUBS[0], 'subO': sub_o(i, n),
-                        'card': {'kind': 'title', 'o': o, 'p': seg(i, 6, 64)} if o > 0 else None})
+                        'card': {'kind': 'title', 'o': o, 'p': seg(i, 4, 54)} if o > 0 else None})
         film.close()
 
-        # ---- scene 2: Today, the flagged readings ----
+        # ---- scene 2: the home screen in the concept device ----
         n = SCENE_FRAMES[1]
-        ev("() => window.__film.tag('.flag-list li', 'Urine volume', 'flag-a')")
-        ev("() => window.__film.tag('.flag-list li', 'Vitamin D', 'flag-b')")
-        y1 = top_for('.flag-list', 150)
+        row = lambda key: f'a.gauge[href="#readings/{key}"]'
         film.open(2)
         for i in range(n):
-            ring = None
-            if i >= 44:
-                first = i < 88
-                o = min(seg(i, 44, 52), 1 - seg(i, 83, 88)) if first else seg(i, 88, 96)
-                ring = {'sel': '[data-film="flag-a"]' if first else '[data-film="flag-b"]', 'o': o, 'pad': 8}
-            film.frame({'scrollY': lerp(0, y1, seg(i, 10, 40)), 'sub': SUBS[1], 'subO': sub_o(i, n), 'ring': ring})
-        film.close()
-
-        # ---- scene 3: urinary calcium chart, then the medication card ----
-        n = SCENE_FRAMES[2]
-        go('#readings/urine_ca')
-        ya = top_for('.main-col .card', 66)
-        film.open(3)
-        for i in range(62):
-            film.frame({'scrollY': ya, 'sub': SUBS[2], 'subO': min(1.0, i / 4), 'fade': 1 - seg(i, 0, 6),
-                        'ring': {'sel': '.main-col svg.chart', 'o': seg(i, 16, 26), 'pad': 4} if i >= 16 else None})
-        go('#meds')
-        ev("() => window.__film.tag('section.card', 'Potassium citrate 20 mEq', 'rx')")
-        ev("() => { const s = document.querySelector('[data-film=\"rx\"]'); const ps = [...s.querySelectorAll('p')].find((e) => e.textContent.includes('has averaged')); if (ps) ps.setAttribute('data-film', 'effect'); }")
-        yb = top_for('[data-film="rx"]', 70)
-        for i in range(62, n):
-            film.frame({'scrollY': yb, 'sub': SUBS[2], 'subO': min(1.0, (n - 1 - i) / 4), 'fade': 1 - seg(i, 62, 68),
-                        'ring': {'sel': '[data-film="effect"]', 'o': seg(i, 78, 88), 'pad': 8} if i >= 78 else None})
-        film.close()
-
-        # ---- scene 4: check-in ----
-        n = SCENE_FRAMES[3]
-        go('#checkin')
-        yc = top_for('form[data-form="checkin"]', 150)
-        ev('y => window.scrollTo(0, y)', yc)
-        slider = 'form[data-form="checkin"] input[name="stress"]'
-        sr = rect(slider)
-        v0 = float(ev('s => document.querySelector(s).value', slider))
-        x_at = lambda v: sr['x'] + 10 + (sr['w'] - 20) * (v - 1) / 9
-        sy = sr['y'] + sr['h'] / 2
-        bx, by = center('form[data-form="checkin"] button[type="submit"]')
-        start = (VW * 0.62, VH * 0.2)
-        film.open(4)
-        submitted = False
-        yd = yc
-        for i in range(n):
-            st = {'scrollY': yc, 'sub': SUBS[3], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
-            if i < 20:
-                t = seg(i, 3, 20)
-                st['cur'] = {'x': lerp(start[0], x_at(v0), t), 'y': lerp(start[1], sy, t)}
-            elif i < 42:
-                v = lerp(v0, 7, seg(i, 20, 40))
-                ev('([s, v]) => { const el = document.querySelector(s); el.value = Math.round(v); el.dispatchEvent(new Event("input", { bubbles: true })); }', [slider, v])
-                st['cur'] = {'x': x_at(v), 'y': sy, 'down': 0.25}
-            elif i < 60:
-                t = seg(i, 42, 58)
-                st['cur'] = {'x': lerp(x_at(7), bx, t), 'y': lerp(sy, by, t)}
+            if i < 44:
+                ring = {'sel': row('urine_vol'), 'o': min(seg(i, 10, 18), 1 - seg(i, 38, 44)), 'pad': 5} if i >= 10 else None
+            elif i < 82:
+                ring = {'sel': row('vitd'), 'o': min(seg(i, 44, 52), 1 - seg(i, 76, 82)), 'pad': 5}
             else:
-                if not submitted:
-                    ev("() => document.querySelector('form[data-form=\"checkin\"]').requestSubmit()")
+                ring = {'sel': row('dose'), 'o': min(seg(i, 82, 90), 1 - seg(i, n - 8, n - 2)), 'pad': 5}
+            film.frame({'scrollY': 0, 'sub': SUBS[1], 'subO': sub_o(i, n), 'ring': ring,
+                        'note': {'text': "Concept device from the team's sketch. No hardware exists.", 'o': min(seg(i, 6, 16), 1 - seg(i, n - 10, n - 2))}})
+        film.close()
+
+        # ---- scene 3: a dose is dispensed, then how the reading moved ----
+        n = SCENE_FRAMES[2]
+        go('#meds')
+
+        def tag_rx():
+            ev("() => window.__film.tag('section.card', 'Potassium citrate 20 mEq', 'rx')")
+            ev("() => { const s = document.querySelector('[data-film=\"rx\"]'); const ps = [...s.querySelectorAll('p')].find((e) => e.textContent.includes('has averaged')); if (ps) ps.setAttribute('data-film', 'effect'); }")
+
+        tag_rx()
+        ya = top_for('[data-film="rx"]', HB + 12)
+        ev('y => window.scrollTo(0, y)', ya)
+        bx, by = center('[data-film="rx"] [data-action="take-dose"]')
+        start = (VW * 0.55, VH * 0.3)
+        film.open(3)
+        pressed = False
+        for i in range(n):
+            st = {'scrollY': ya, 'sub': SUBS[2], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
+            if i < 26:
+                t = seg(i, 6, 24)
+                st['cur'] = {'x': lerp(start[0], bx, t), 'y': lerp(start[1], by, t)}
+            else:
+                if not pressed:
+                    ev("() => document.querySelector('[data-film=\"rx\"] [data-action=\"take-dose\"]').click()")
                     time.sleep(0.15)
-                    submitted = True
-                    yd = top_for('.bubble', 96)
-                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 60, 68), 'o': 1 - seg(i, 62, 68)}
-                st['scrollY'] = lerp(yc, yd, seg(i, 68, 86))
-                if i >= 88:
-                    st['ring'] = {'sel': '.activities', 'o': seg(i, 88, 98), 'pad': 8}
+                    tag_rx()
+                    pressed = True
+                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 26, 34), 'o': 1 - seg(i, 30, 38)}
+                if i < 96:
+                    st['ring'] = {'sel': '.dv-meds', 'o': min(seg(i, 34, 42), 1 - seg(i, 90, 96)), 'pad': 6}
+                else:
+                    st['ring'] = {'sel': '[data-film="effect"]', 'o': seg(i, 98, 108), 'pad': 8}
             film.frame(st)
         film.close()
 
-        # ---- scene 5: Environment, the real NASA data ----
+        # ---- scene 4: Astro, the chat companion ----
+        n = SCENE_FRAMES[3]
+        go('#astro')
+        yb = top_for('section.chat', HB + 10)
+        ev('y => window.scrollTo(0, y)', yb)
+        film.open(4)
+        # (frame, selector to press): a quick reply, the check-in, then three ratings
+        steps = [(30, '[data-action="chat-say"]'), (72, '[data-action="chat-checkin"]'), (92, '[data-action="chat-rate"][data-value="4"]'),
+                 (106, '[data-action="chat-rate"][data-value="7"]'), (120, '[data-action="chat-rate"][data-value="6"]')]
+        done = 0
+        pos = (VW * 0.6, VH * 0.32)
+        target = center(steps[0][1])
+        move_from = 8
+        for i in range(n):
+            st = {'scrollY': yb, 'sub': SUBS[3], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
+            if done < len(steps):
+                at, sel = steps[done]
+                t = seg(i, move_from, at - 3)
+                st['cur'] = {'x': lerp(pos[0], target[0], t), 'y': lerp(pos[1], target[1], t), 'down': seg(i, at - 3, at)}
+                if i == at:
+                    ev('s => document.querySelector(s).click()', sel)
+                    time.sleep(0.12)
+                    ev('y => window.scrollTo(0, y)', yb)
+                    pos = target
+                    done += 1
+                    move_from = i + 2
+                    if done < len(steps):
+                        target = center(steps[done][1])
+            else:
+                st['cur'] = {'x': pos[0], 'y': pos[1], 'o': 1 - seg(i, 122, 130)}
+                st['ring'] = {'sel': '.thread .msg-astro:last-child .msg-text', 'o': seg(i, 128, 138), 'pad': 6}
+            film.frame(st)
+        film.close()
+
+        # ---- scene 5: Space, the real NASA data ----
         n = SCENE_FRAMES[4]
         go('#environment')
         page.clock.run_for(2600)  # the cabin feed connects and the screen redraws
         ev("() => document.querySelector('[data-action=\"toggle-replay\"]').click()")
         time.sleep(0.15)
         sec = lambda k: f'main section.card:nth-of-type({k})'
-        e1 = top_for(sec(2), 66)
-        e2 = top_for(sec(3), 66)
-        e3 = top_for(sec(4), 66)
+        e1 = top_for(sec(2), HB + 10)
+        e2 = top_for(sec(3), HB + 10)
+        e3 = top_for(sec(4), HB + 10)
         film.open(5)
         for i in range(n):
             st = {'sub': SUBS[4], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
-            if i < 66:
+            if i < 56:
                 st['scrollY'] = e1
-                if i >= 14:
-                    st['ring'] = {'sel': f'{sec(2)} .banner-warn', 'o': min(seg(i, 14, 22), 1 - seg(i, 60, 66)), 'pad': 6}
-            elif i < 128:
-                st['scrollY'] = lerp(e1, e2, seg(i, 66, 84))
-                if i >= 90:
-                    st['ring'] = {'sel': f'{sec(3)} svg.chart', 'o': min(seg(i, 90, 98), 1 - seg(i, 122, 128)), 'pad': 4}
+                if i >= 12:
+                    st['ring'] = {'sel': f'{sec(2)} .banner-warn', 'o': min(seg(i, 12, 20), 1 - seg(i, 50, 56)), 'pad': 6}
+            elif i < 108:
+                st['scrollY'] = lerp(e1, e2, seg(i, 56, 72))
+                if i >= 76:
+                    st['ring'] = {'sel': f'{sec(3)} svg.chart', 'o': min(seg(i, 76, 84), 1 - seg(i, 102, 108)), 'pad': 4}
             else:
-                st['scrollY'] = lerp(e2, e3, seg(i, 128, 146))
+                st['scrollY'] = lerp(e2, e3, seg(i, 108, 124))
                 # the render machine is offline, so say on screen that these values were recorded
-                st['note'] = {'text': "Values recorded from NASA's live ISS feed, 14 Nov 2026", 'o': min(seg(i, 132, 142), 1 - seg(i, n - 8, n - 2))}
-                if i >= 152:
-                    st['ring'] = {'sel': f'{sec(4)} table', 'o': seg(i, 152, 160), 'pad': 6}
+                st['note'] = {'text': "Values recorded from NASA's live ISS feed, 14 Nov 2026", 'o': min(seg(i, 112, 122), 1 - seg(i, n - 8, n - 2))}
+                if i >= 130:
+                    st['ring'] = {'sel': f'{sec(4)} table', 'o': seg(i, 130, 138), 'pad': 6}
             film.frame(st)
         film.close()
 
-        # ---- scene 6: report to the flight surgeon, signal delay, the ground console ----
+        # ---- scene 6: a report crosses the signal delay to the flight surgeon ----
         n = SCENE_FRAMES[5]
         go('#surgeon')
-        ye = top_for('form[data-form="send-report"]', 190)
+        ye = top_for('form[data-form="send-report"]', HB + 60)
         ev('y => window.scrollTo(0, y)', ye)
         bx, by = center('form[data-form="send-report"] button[type="submit"]')
-        start = (VW * 0.7, VH * 0.25)
+        start = (VW * 0.66, VH * 0.3)
         film.open(6)
         sent = False
         jumped = False
-        reply = 'Increase fluids today. Repeat the urine panel in three days.'
-        yf = yg = 0
+        yf = 0
         for i in range(n):
             st = {'scrollY': ye, 'sub': SUBS[5], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
             if i < 20:
-                t = seg(i, 3, 18)
+                t = seg(i, 4, 18)
                 st['cur'] = {'x': lerp(start[0], bx, t), 'y': lerp(start[1], by, t)}
-            elif i < 76:
+            elif i < 70:
                 if not sent:
                     ev("() => document.querySelector('form[data-form=\"send-report\"]').requestSubmit()")
                     time.sleep(0.15)
                     sent = True
                 st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 20, 28), 'o': 1 - seg(i, 24, 30)}
-                st['scrollY'] = lerp(ye, ye + 110, seg(i, 30, 44))
-                if i >= 44:
-                    st['ring'] = {'sel': 'form[data-form="send-report"] ~ ul.plain li:first-child', 'o': min(seg(i, 44, 52), 1 - seg(i, 70, 76)), 'pad': 7}
+                st['scrollY'] = lerp(ye, ye + 90, seg(i, 30, 42))
+                if i >= 42:
+                    st['ring'] = {'sel': 'form[data-form="send-report"] ~ ul.plain li:first-child', 'o': min(seg(i, 42, 50), 1 - seg(i, 64, 70)), 'pad': 7}
             else:
                 if not jumped:
                     page.clock.run_for(22000)  # the report arrives on the ground
                     time.sleep(0.1)
-                    yf = top_for('.console', 70)
-                    yg = top_for('form[data-form="surgeon-reply"]', 250)
+                    yf = top_for('.console', HB + 10)
                     jumped = True
-                st['fade'] = 1 - seg(i, 76, 82)
-                st['scrollY'] = lerp(yf, yg, seg(i, 92, 106))
-                if i >= 104:
-                    k = int(len(reply) * seg(i, 104, 130) + 0.5)
-                    ev('t => { const el = document.querySelector(\'form[data-form="surgeon-reply"] textarea\'); if (el) el.value = t; }', reply[:k])
-                    st['ring'] = {'sel': 'form[data-form="surgeon-reply"] textarea', 'o': seg(i, 104, 112), 'pad': 5}
+                st['fade'] = 1 - seg(i, 70, 76)
+                st['scrollY'] = yf
+                if i >= 82:
+                    st['ring'] = {'sel': '.console details.report', 'o': seg(i, 82, 92), 'pad': 6}
             film.frame(st)
         film.close()
 
@@ -434,12 +442,12 @@ def main():
         n = SCENE_FRAMES[6]
         go('#about')
         ev("() => window.__film.tag('section.card', 'Where each limit comes from', 'limits')")
-        yi = top_for('[data-film="limits"] table', 110)
+        yi = top_for('[data-film="limits"] table', HB + 14)
         film.open(7)
         for i in range(n):
-            o = seg(i, 38, 52)
+            o = seg(i, 46, 60)
             film.frame({'scrollY': yi, 'sub': SUBS[6], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6),
-                        'ring': {'sel': '[data-film="limits"] table', 'o': min(seg(i, 8, 16), 1 - seg(i, 34, 40)), 'pad': 6} if 8 <= i < 40 else None,
+                        'ring': {'sel': '[data-film="limits"] table', 'o': min(seg(i, 8, 16), 1 - seg(i, 40, 46)), 'pad': 6} if 8 <= i < 46 else None,
                         'card': {'kind': 'end', 'o': o} if o > 0 else None})
         film.close()
         browser.close()
