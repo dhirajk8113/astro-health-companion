@@ -58,7 +58,7 @@ function fmtDelta(indicator, delta) {
 
 function simulatedBanner(state) {
   if (!state.profile.simulated) return '';
-  return '<div class="banner banner-sim" role="note"><strong>Simulated data.</strong> The readings are invented for the demo, with one exception: the radiation dose replays real ISS detector measurements from NASA\'s RadLab. No reading comes from a real person.</div>';
+  return `<div class="banner banner-sim" role="note"><strong>Simulated data.</strong> The readings are invented for the demo${state.readings.some((r) => r.source === 'radlab') ? ', with one exception: the radiation dose replays real ISS detector measurements from NASA\'s RadLab' : ''}. No reading comes from a real person.</div>`;
 }
 
 function sourceLinks(sources) {
@@ -184,7 +184,7 @@ export function viewReadings(state, selectedId) {
           ${status}
           ${lineChart(list, { band: indicator.chart, baseline: indicator.id === 'dose' ? undefined : baseline, name: indicator.name, markAt: rx ? rx.start : undefined, markLabel: rx ? `${rx.name} started` : undefined })}
           <p class="muted small">Shaded band: reference range. <strong>Limit source: ${esc(LIMIT_SOURCES[indicator.limitSource])}.</strong> ${esc(indicator.limitNote)}${indicator.limitRef ? ` <a href="${esc(indicator.limitRef.url)}" target="_blank" rel="noopener">Open the NASA document</a>` : ''}</p>
-          ${indicator.dataNote ? `<p class="muted small"><strong>Real data.</strong> ${esc(indicator.dataNote)}</p>` : ''}
+          ${indicator.dataNote && list.some((r) => r.source === 'radlab') ? `<p class="muted small"><strong>Real data.</strong> ${esc(indicator.dataNote)}</p>` : ''}
         </section>
 
         <section class="card">

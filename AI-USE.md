@@ -49,6 +49,7 @@ Times are US Central.
 | Nov 14, 16:25 to 16:35 | At the team's direction, replaced the assistant's thresholds with NASA's published values, after checking each number against its NASA document | `js/data/indicators.js`, the About screen, the README | A source label on every limit; this log |
 | Nov 14, 16:35 to 16:50 | The 30-second demo video, filmed from the real app by a script, with subtitles | The project demo link | An "AI-generated video" watermark on every frame; the SI field on the project page; this log |
 | Nov 14, 19:17 to 19:40 | Real NASA data features: retrieved and saved the data, wrote the code and the tests | `js/data/nasa-snapshots.js`, `js/lib/spaceweather.js`, `js/lib/isslive.js`, `js/lib/ephemeris.js`, the Environment screen | Disclosure comment in each file; source and retrieval date beside each dataset; this log |
+| Nov 14, 19:40 to 20:05 | Checked the new features on the live site and fixed two labels; re-filmed the demo video with the Environment screen | `js/lib/isslive.js`, `js/views.js`, `tools/film-demo.py`, the project demo link | An "AI-generated video" watermark on every frame; an on-screen note on the recorded cabin values; this log |
 
 ## How AI output is marked in the project
 
@@ -56,3 +57,4 @@ Times are US Central.
 - The About screen and the page footer state that the code was written with an AI assistant.
 - Simulated data is labelled on every screen that shows it.
 - The demo video shows "AI-generated video" on every frame and says in its last subtitle that the readings are simulated and the code was written with AI.
+- The machine that renders the video has no internet access. The space weather shot therefore uses the app's own replay of the saved May 2024 storm, which the screen states. The ISS cabin shot shows values recorded from NASA's live feed on the deployed site on 14 Nov 2026, and the video says so on screen during that shot.

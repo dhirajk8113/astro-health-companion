@@ -32,10 +32,38 @@ SUBS = [
     "Astro checks each reading against NASA's limits and the crew member's own baseline.",
     'It tracks prescribed medication and how the reading moved afterwards.',
     'A check-in offers support and hands off to people when needed.',
-    "Reports reach the flight surgeon with the mission's signal delay. Doctors decide. Astro never diagnoses.",
-    'Limits come from NASA documents. Readings are simulated. Code written with AI.',
+    'It reads real NASA data: space weather alerts, measured radiation dose and the live ISS cabin.',
+    'Reports cross the signal delay to the flight surgeon. Doctors decide, not Astro.',
+    "Limits are NASA's. Readings are simulated. Code written with AI.",
 ]
-SCENE_FRAMES = [105, 150, 150, 150, 180, 150]  # 885 frames = 29.5 s
+SCENE_FRAMES = [90, 135, 120, 120, 195, 135, 90]  # 885 frames = 29.5 s
+
+# The machine that renders the video has no internet access, so the two live
+# NASA services cannot be reached while filming. Space weather is shown through
+# the app's own replay of the saved May 2024 storm. The ISS cabin table is fed
+# the values the live NASA feed gave on the deployed site at 19:37 US Central on
+# 14 Nov 2026 (cabin 23.7 C, 758 torr, carbon dioxide 2.44 mmHg last sent 12
+# days earlier, urine tank 49 percent, waste water 71, clean water 57).
+ISS_REPLAY_JS = r"""
+(() => {
+  const Real = window.WebSocket;
+  class Replay {
+    constructor(url) { this.url = url; setTimeout(() => this.onopen && this.onopen(), 50); }
+    send(msg) {
+      const reply = (data, ms) => setTimeout(() => this.onmessage && this.onmessage({ data }), ms);
+      if (msg === 'wsok') reply('WSOK\r\n', 30);
+      else if (msg.startsWith('create_session')) reply('CONOK,Sreplay,50000,5000,*\r\n', 30);
+      else if (msg.startsWith('control')) {
+        const hours = (age) => ((Date.now() - age - Date.UTC(new Date().getUTCFullYear(), 0, 1)) / 3.6e6 + 24).toFixed(6);
+        const v = [[23.7, 8e3], [758.1, 12e3], [2.435, 12.3 * 864e5], [49, 73 * 6e4], [70.9, 5e3], [57.2, 5e3]];
+        reply('SUBOK,1,6,2\r\n' + v.map(([val, age], i) => `U,1,${i + 1},${val}|${hours(age)}`).join('\r\n') + '\r\n', 60);
+      }
+    }
+    close() {}
+  }
+  window.WebSocket = function (url, protocol) { return String(url).includes('lightstreamer') ? new Replay(url) : new Real(url, protocol); };
+})();
+"""
 
 OVERLAY_JS = r"""
 (() => {
@@ -49,6 +77,8 @@ OVERLAY_JS = r"""
       text-align: center; z-index: 9600; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55); opacity: 0; }
     #f-wm { position: fixed; right: 14px; top: 13px; padding: 5px 13px; border-radius: 999px; background: rgba(12, 17, 27, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.6); color: #fff; font: 700 15px/1.2 Inter, sans-serif; letter-spacing: 0.02em; z-index: 9700; }
+    #f-note { position: fixed; right: 14px; top: 50px; padding: 5px 13px; border-radius: 999px; background: rgba(12, 17, 27, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.35); color: #e9edf5; font: 600 14px/1.2 Inter, sans-serif; z-index: 9700; opacity: 0; }
     #f-cur { position: fixed; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; background: rgba(255, 255, 255, 0.92);
       border: 2px solid #0c111b; z-index: 9200; opacity: 0; pointer-events: none; }
     #f-ring { position: fixed; border: 3px solid #7ea6ff; border-radius: 12px; box-shadow: 0 0 0 7px rgba(126, 166, 255, 0.2);
@@ -76,6 +106,7 @@ OVERLAY_JS = r"""
   const add = (id, html) => { const el = document.createElement('div'); el.id = id; el.innerHTML = html || ''; document.body.appendChild(el); return el; };
   const sub = add('f-sub');
   add('f-wm', 'AI-generated video');
+  const note = add('f-note');
   const cur = add('f-cur');
   const ring = add('f-ring');
   const fade = add('f-fade');
@@ -92,7 +123,7 @@ OVERLAY_JS = r"""
       <div class="mark">A</div>
       <h1>Astro</h1>
       <p class="url">dhirajk8113.github.io/astro-health-companion</p>
-      <p class="small">Demo readings are simulated. Code and video made with AI assistance.</p>
+      <p class="small">Demo readings are simulated, except the radiation dose. Code and video made with AI assistance.</p>
     </div>`);
   const titleBox = card.querySelector('#f-title');
   const endBox = card.querySelector('#f-end');
@@ -120,6 +151,8 @@ OVERLAY_JS = r"""
         ring.style.opacity = s.ring.o == null ? 1 : s.ring.o;
       } else ring.style.opacity = 0;
       fade.style.opacity = s.fade || 0;
+      note.textContent = s.note ? s.note.text : '';
+      note.style.opacity = s.note ? s.note.o : 0;
       card.style.opacity = s.card ? s.card.o : 0;
       if (s.card) {
         titleBox.style.display = s.card.kind === 'title' ? '' : 'none';
@@ -203,6 +236,8 @@ def main():
         ctx = browser.new_context(viewport={'width': VW, 'height': VH}, device_scale_factor=W / VW, color_scheme='dark',
                                   locale='en-US', timezone_id='America/Chicago')
         page = ctx.new_page()
+        page.add_init_script(ISS_REPLAY_JS)
+        page.route('**/DONKI/**', lambda route: route.abort())
         page.clock.install(time=datetime.datetime.now())
         page.goto(BASE)
         ev = page.evaluate
@@ -246,9 +281,9 @@ def main():
         n = SCENE_FRAMES[0]
         film.open(1)
         for i in range(n):
-            o = 1 - seg(i, 82, 100)
+            o = 1 - seg(i, 68, 84)
             film.frame({'scrollY': 0, 'sub': SUBS[0], 'subO': sub_o(i, n),
-                        'card': {'kind': 'title', 'o': o, 'p': seg(i, 8, 78)} if o > 0 else None})
+                        'card': {'kind': 'title', 'o': o, 'p': seg(i, 6, 64)} if o > 0 else None})
         film.close()
 
         # ---- scene 2: Today, the flagged readings ----
@@ -258,13 +293,12 @@ def main():
         y1 = top_for('.flag-list', 150)
         film.open(2)
         for i in range(n):
-            y = lerp(0, y1, seg(i, 12, 45))
             ring = None
-            if i >= 48:
-                first = i < 100
-                o = min(seg(i, 48, 56), 1 - seg(i, 94, 100)) if first else min(seg(i, 100, 108), 1.0)
+            if i >= 44:
+                first = i < 88
+                o = min(seg(i, 44, 52), 1 - seg(i, 83, 88)) if first else seg(i, 88, 96)
                 ring = {'sel': '[data-film="flag-a"]' if first else '[data-film="flag-b"]', 'o': o, 'pad': 8}
-            film.frame({'scrollY': y, 'sub': SUBS[1], 'subO': sub_o(i, n), 'ring': ring})
+            film.frame({'scrollY': lerp(0, y1, seg(i, 10, 40)), 'sub': SUBS[1], 'subO': sub_o(i, n), 'ring': ring})
         film.close()
 
         # ---- scene 3: urinary calcium chart, then the medication card ----
@@ -272,16 +306,16 @@ def main():
         go('#readings/urine_ca')
         ya = top_for('.main-col .card', 66)
         film.open(3)
-        for i in range(78):
+        for i in range(62):
             film.frame({'scrollY': ya, 'sub': SUBS[2], 'subO': min(1.0, i / 4), 'fade': 1 - seg(i, 0, 6),
-                        'ring': {'sel': '.main-col svg.chart', 'o': seg(i, 20, 30), 'pad': 4} if i >= 20 else None})
+                        'ring': {'sel': '.main-col svg.chart', 'o': seg(i, 16, 26), 'pad': 4} if i >= 16 else None})
         go('#meds')
         ev("() => window.__film.tag('section.card', 'Potassium citrate 20 mEq', 'rx')")
         ev("() => { const s = document.querySelector('[data-film=\"rx\"]'); const ps = [...s.querySelectorAll('p')].find((e) => e.textContent.includes('has averaged')); if (ps) ps.setAttribute('data-film', 'effect'); }")
         yb = top_for('[data-film="rx"]', 70)
-        for i in range(78, n):
-            film.frame({'scrollY': yb, 'sub': SUBS[2], 'subO': min(1.0, (n - 1 - i) / 4), 'fade': 1 - seg(i, 78, 84),
-                        'ring': {'sel': '[data-film="effect"]', 'o': seg(i, 96, 106), 'pad': 8} if i >= 96 else None})
+        for i in range(62, n):
+            film.frame({'scrollY': yb, 'sub': SUBS[2], 'subO': min(1.0, (n - 1 - i) / 4), 'fade': 1 - seg(i, 62, 68),
+                        'ring': {'sel': '[data-film="effect"]', 'o': seg(i, 78, 88), 'pad': 8} if i >= 78 else None})
         film.close()
 
         # ---- scene 4: check-in ----
@@ -301,15 +335,15 @@ def main():
         yd = yc
         for i in range(n):
             st = {'scrollY': yc, 'sub': SUBS[3], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
-            if i < 26:
-                t = seg(i, 4, 26)
+            if i < 20:
+                t = seg(i, 3, 20)
                 st['cur'] = {'x': lerp(start[0], x_at(v0), t), 'y': lerp(start[1], sy, t)}
-            elif i < 52:
-                v = lerp(v0, 7, seg(i, 26, 50))
+            elif i < 42:
+                v = lerp(v0, 7, seg(i, 20, 40))
                 ev('([s, v]) => { const el = document.querySelector(s); el.value = Math.round(v); el.dispatchEvent(new Event("input", { bubbles: true })); }', [slider, v])
                 st['cur'] = {'x': x_at(v), 'y': sy, 'down': 0.25}
-            elif i < 74:
-                t = seg(i, 52, 70)
+            elif i < 60:
+                t = seg(i, 42, 58)
                 st['cur'] = {'x': lerp(x_at(7), bx, t), 'y': lerp(sy, by, t)}
             else:
                 if not submitted:
@@ -317,39 +351,69 @@ def main():
                     time.sleep(0.15)
                     submitted = True
                     yd = top_for('.bubble', 96)
-                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 74, 82), 'o': 1 - seg(i, 76, 82)}
-                st['scrollY'] = lerp(yc, yd, seg(i, 82, 102))
-                if i >= 104:
-                    st['ring'] = {'sel': '.activities', 'o': seg(i, 104, 114), 'pad': 8}
+                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 60, 68), 'o': 1 - seg(i, 62, 68)}
+                st['scrollY'] = lerp(yc, yd, seg(i, 68, 86))
+                if i >= 88:
+                    st['ring'] = {'sel': '.activities', 'o': seg(i, 88, 98), 'pad': 8}
             film.frame(st)
         film.close()
 
-        # ---- scene 5: report to the flight surgeon, signal delay, the ground console ----
+        # ---- scene 5: Environment, the real NASA data ----
         n = SCENE_FRAMES[4]
+        go('#environment')
+        page.clock.run_for(2600)  # the cabin feed connects and the screen redraws
+        ev("() => document.querySelector('[data-action=\"toggle-replay\"]').click()")
+        time.sleep(0.15)
+        sec = lambda k: f'main section.card:nth-of-type({k})'
+        e1 = top_for(sec(2), 66)
+        e2 = top_for(sec(3), 66)
+        e3 = top_for(sec(4), 66)
+        film.open(5)
+        for i in range(n):
+            st = {'sub': SUBS[4], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
+            if i < 66:
+                st['scrollY'] = e1
+                if i >= 14:
+                    st['ring'] = {'sel': f'{sec(2)} .banner-warn', 'o': min(seg(i, 14, 22), 1 - seg(i, 60, 66)), 'pad': 6}
+            elif i < 128:
+                st['scrollY'] = lerp(e1, e2, seg(i, 66, 84))
+                if i >= 90:
+                    st['ring'] = {'sel': f'{sec(3)} svg.chart', 'o': min(seg(i, 90, 98), 1 - seg(i, 122, 128)), 'pad': 4}
+            else:
+                st['scrollY'] = lerp(e2, e3, seg(i, 128, 146))
+                # the render machine is offline, so say on screen that these values were recorded
+                st['note'] = {'text': "Values recorded from NASA's live ISS feed, 14 Nov 2026", 'o': min(seg(i, 132, 142), 1 - seg(i, n - 8, n - 2))}
+                if i >= 152:
+                    st['ring'] = {'sel': f'{sec(4)} table', 'o': seg(i, 152, 160), 'pad': 6}
+            film.frame(st)
+        film.close()
+
+        # ---- scene 6: report to the flight surgeon, signal delay, the ground console ----
+        n = SCENE_FRAMES[5]
         go('#surgeon')
         ye = top_for('form[data-form="send-report"]', 190)
         ev('y => window.scrollTo(0, y)', ye)
         bx, by = center('form[data-form="send-report"] button[type="submit"]')
         start = (VW * 0.7, VH * 0.25)
-        film.open(5)
+        film.open(6)
         sent = False
         jumped = False
         reply = 'Increase fluids today. Repeat the urine panel in three days.'
         yf = yg = 0
         for i in range(n):
-            st = {'scrollY': ye, 'sub': SUBS[4], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
-            if i < 26:
-                t = seg(i, 4, 24)
+            st = {'scrollY': ye, 'sub': SUBS[5], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6)}
+            if i < 20:
+                t = seg(i, 3, 18)
                 st['cur'] = {'x': lerp(start[0], bx, t), 'y': lerp(start[1], by, t)}
-            elif i < 88:
+            elif i < 76:
                 if not sent:
                     ev("() => document.querySelector('form[data-form=\"send-report\"]').requestSubmit()")
                     time.sleep(0.15)
                     sent = True
-                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 26, 34), 'o': 1 - seg(i, 30, 36)}
-                st['scrollY'] = lerp(ye, ye + 110, seg(i, 36, 52))
-                if i >= 50:
-                    st['ring'] = {'sel': 'form[data-form="send-report"] ~ ul.plain li:first-child', 'o': min(seg(i, 50, 58), 1 - seg(i, 82, 88)), 'pad': 7}
+                st['cur'] = {'x': bx, 'y': by, 'down': seg(i, 20, 28), 'o': 1 - seg(i, 24, 30)}
+                st['scrollY'] = lerp(ye, ye + 110, seg(i, 30, 44))
+                if i >= 44:
+                    st['ring'] = {'sel': 'form[data-form="send-report"] ~ ul.plain li:first-child', 'o': min(seg(i, 44, 52), 1 - seg(i, 70, 76)), 'pad': 7}
             else:
                 if not jumped:
                     page.clock.run_for(22000)  # the report arrives on the ground
@@ -357,26 +421,25 @@ def main():
                     yf = top_for('.console', 70)
                     yg = top_for('form[data-form="surgeon-reply"]', 250)
                     jumped = True
-                st['fade'] = 1 - seg(i, 88, 94)
-                st['scrollY'] = lerp(yf, yg, seg(i, 108, 126))
-                if i >= 124:
-                    k = int(len(reply) * seg(i, 124, 168) + 0.5)
+                st['fade'] = 1 - seg(i, 76, 82)
+                st['scrollY'] = lerp(yf, yg, seg(i, 92, 106))
+                if i >= 104:
+                    k = int(len(reply) * seg(i, 104, 130) + 0.5)
                     ev('t => { const el = document.querySelector(\'form[data-form="surgeon-reply"] textarea\'); if (el) el.value = t; }', reply[:k])
-                    st['ring'] = {'sel': 'form[data-form="surgeon-reply"] textarea', 'o': seg(i, 124, 132), 'pad': 5}
+                    st['ring'] = {'sel': 'form[data-form="surgeon-reply"] textarea', 'o': seg(i, 104, 112), 'pad': 5}
             film.frame(st)
         film.close()
 
-        # ---- scene 6: where each limit comes from, then the end card ----
-        n = SCENE_FRAMES[5]
+        # ---- scene 7: where each limit comes from, then the end card ----
+        n = SCENE_FRAMES[6]
         go('#about')
         ev("() => window.__film.tag('section.card', 'Where each limit comes from', 'limits')")
-        yh = top_for('[data-film="limits"]', 66)
         yi = top_for('[data-film="limits"] table', 110)
-        film.open(6)
+        film.open(7)
         for i in range(n):
-            o = seg(i, 104, 120)
-            film.frame({'scrollY': lerp(yh, yi, seg(i, 30, 70)), 'sub': SUBS[5], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6),
-                        'ring': {'sel': '[data-film="limits"] table', 'o': min(seg(i, 60, 70), 1 - seg(i, 100, 106)), 'pad': 6} if 60 <= i < 106 else None,
+            o = seg(i, 38, 52)
+            film.frame({'scrollY': yi, 'sub': SUBS[6], 'subO': sub_o(i, n), 'fade': 1 - seg(i, 0, 6),
+                        'ring': {'sel': '[data-film="limits"] table', 'o': min(seg(i, 8, 16), 1 - seg(i, 34, 40)), 'pad': 6} if 8 <= i < 40 else None,
                         'card': {'kind': 'end', 'o': o} if o > 0 else None})
         film.close()
         browser.close()

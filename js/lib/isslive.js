@@ -59,8 +59,9 @@ export function parseUpdate(line, fieldCount) {
 // Judges one reading. `ageMinutes` is how long ago the station last sent it.
 export function cabinStatus(item, value, ageMinutes) {
   if (!Number.isFinite(value)) return { status: 'none', text: 'No value received yet.' };
+  // A tank level only changes when the tank is used, so it is old news only after a day.
+  if (!item.limit) return ageMinutes > 1440 ? { status: 'stale', text: 'Not updating.' } : { status: 'info', text: 'Shown for information. No NASA limit applied.' };
   if (ageMinutes > FRESH_MINUTES) return { status: 'stale', text: 'Not updating. Too old to judge.' };
-  if (!item.limit) return { status: 'info', text: 'Shown for information. No NASA limit applied.' };
   const { lo, hi, text } = item.limit;
   const low = Number.isFinite(lo) && value < lo;
   const high = Number.isFinite(hi) && (Number.isFinite(lo) ? value > hi : value >= hi);
