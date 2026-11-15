@@ -1,4 +1,4 @@
-// Astro health companion: saved copies of NASA data.
+// Aeronyx: saved copies of NASA data.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //

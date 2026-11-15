@@ -1,4 +1,4 @@
-// Astro health companion: wiring between the screens and the stored state.
+// Aeronyx: wiring between the screens and the stored state.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 
@@ -6,14 +6,24 @@ import { getIndicator } from './data/indicators.js';
 import { getMedication } from './data/medications.js';
 import { demoState } from './data/demo.js';
 import { classify, commDelay, buildReport } from './lib/assess.js';
-import { scoreCheckin, sustainedLow, pickActivities, astroReply, LEVEL } from './lib/checkin.js';
-import { loadState, saveState, clearState, newId } from './lib/store.js';
-import { viewToday, viewReadings, viewMeds, viewCheckin, viewSurgeon, viewSetup, viewAbout, viewEnvironment } from './views.js';
+import { scoreCheckin, sustainedLow, pickActivities, astroReply, isCrisisText, LEVEL } from './lib/checkin.js';
+import { chatReply, parseRating, CHECKIN_STEPS } from './lib/chat.js';
+import { usesSampleSubmitter } from './lib/device.js';
+import { initDevice } from './device.js';
+import { loadState, saveState, clearState, isFirstVisit, newId } from './lib/store.js';
+import { viewToday, viewReadings, viewMeds, viewAstro, viewSurgeon, viewSetup, viewAbout, viewEnvironment } from './views.js';
 import { fetchDonki } from './lib/spaceweather.js';
 import { connectIss } from './lib/isslive.js';
 
 let state = loadState();
-const ui = { checkin: null, confirmClear: false, breathing: null };
+// A first visit opens with the simulated demo data, labelled as such, so no screen is empty.
+// "Clear everything" under Setup starts a blank record.
+if (isFirstVisit()) {
+  state = demoState(new Date().toISOString());
+  saveState(state);
+}
+// flow: the check-in question Astro is waiting on, while one is being asked in the chat.
+const ui = { flow: null, confirmClear: false, breathing: null };
 
 // Real NASA data that lives outside the saved state: space weather from DONKI
 // and the live ISS cabin feed. Neither is stored on the device.
@@ -63,7 +73,8 @@ const nowISO = () => new Date().toISOString();
 function route() {
   const raw = window.location.hash.replace(/^#/, '') || 'today';
   const [name, arg] = raw.split('/');
-  return { name, arg };
+  // The check-in now lives inside the Astro chat; old links still work.
+  return { name: name === 'checkin' ? 'astro' : name, arg };
 }
 
 function toast(message) {
@@ -112,7 +123,7 @@ function render({ keepFields = false } = {}) {
   switch (r.name) {
     case 'readings': html = viewReadings(state, r.arg); break;
     case 'meds': html = viewMeds(state, nowISO()); break;
-    case 'checkin': html = viewCheckin(state, { result: ui.checkin }); break;
+    case 'astro': html = viewAstro(state, { flow: ui.flow }); break;
     case 'surgeon': html = viewSurgeon(state, nowISO()); break;
     case 'setup': html = viewSetup(state); break;
     case 'about': html = viewAbout(); break;
@@ -121,6 +132,11 @@ function render({ keepFields = false } = {}) {
   }
   main.innerHTML = html;
   if (saved) restoreFields(saved);
+  const chip = document.getElementById('demo-chip');
+  if (chip) chip.hidden = !state.profile.simulated;
+  // Keep the newest message of the chat in view.
+  const thread = main.querySelector('.thread');
+  if (thread) thread.scrollTop = thread.scrollHeight;
   document.querySelectorAll('[data-nav]').forEach((a) => {
     const on = a.dataset.nav === (r.name || 'today');
     a.classList.toggle('active', on);
@@ -173,6 +189,74 @@ function sendReport(note, auto) {
   });
 }
 
+// ---------- Astro, the chat companion ----------
+
+function say(from, text, extra = {}) {
+  state.chat.push({ id: newId('m'), from, t: nowISO(), text, ...extra });
+  if (state.chat.length > 80) state.chat = state.chat.slice(-80);
+}
+
+// Astro asks one check-in question; the answer is a tapped or typed number.
+function askStep(index) {
+  const step = CHECKIN_STEPS[index];
+  ui.flow = { index, step, values: ui.flow ? ui.flow.values : {} };
+  say('astro', step.ask, { topic: 'checkin' });
+}
+
+function finishCheckin(values) {
+  const score = scoreCheckin({ ...values, text: '' });
+  const now = nowISO();
+  state.checkins.push({ id: newId('c'), t: now, mood: score.mood, stress: score.stress, loneliness: score.loneliness, level: score.level, activity: null });
+  state.readings.push({ id: newId('r'), indicatorId: 'mood', t: now, value: score.mood, source: 'check-in', note: 'From a check-in' });
+  const sustained = sustainedLow(state.checkins, state.profile.baselines.mood);
+  const reply = astroReply(score, { sustained });
+  const handoff = score.level === LEVEL.HANDOFF;
+  say('astro', `${reply.title} ${reply.lines.join(' ')}`, {
+    topic: 'checkin',
+    level: score.level,
+    activities: handoff ? [] : pickActivities(score).map((a) => a.id),
+  });
+  if (handoff) sendReport('Sent automatically: Astro handed a check-in off to people.', true);
+}
+
+function answerStep(n) {
+  const { index, step, values } = ui.flow;
+  values[step.key] = n;
+  say('me', String(n));
+  if (index + 1 < CHECKIN_STEPS.length) {
+    askStep(index + 1);
+  } else {
+    ui.flow = null;
+    finishCheckin(values);
+  }
+}
+
+// Something was typed or tapped in the chat.
+function hear(raw) {
+  const said = String(raw || '').trim().slice(0, 500);
+  if (!said) return;
+  if (ui.flow && !isCrisisText(said)) {
+    const n = parseRating(said, ui.flow.step);
+    if (n === null) {
+      say('me', said);
+      say('astro', `Pick a number from ${ui.flow.step.min} to ${ui.flow.step.max}. You can tap one below.`, { topic: 'checkin' });
+    } else {
+      answerStep(n);
+    }
+  } else {
+    ui.flow = null;
+    const reply = chatReply(said, state.chat);
+    say('me', said);
+    say('astro', reply.text, { topic: reply.topic, level: reply.level, activities: reply.activities });
+    // The flag carries the ratings on record, never what was typed.
+    if (reply.level === LEVEL.HANDOFF) sendReport('Sent automatically: Astro handed a conversation off to people.', true);
+  }
+  persist();
+  render();
+  const input = main.querySelector('form[data-form="chat"] input[name="text"]');
+  if (input) input.focus();
+}
+
 const actions = {
   'toggle-replay': () => {
     env.replay = !env.replay;
@@ -185,7 +269,7 @@ const actions = {
   },
   'load-demo': () => {
     state = demoState(nowISO());
-    ui.checkin = null;
+    ui.flow = null;
     persist();
     toast('Simulated demo data loaded.');
     if (route().name === 'today') render(); else window.location.hash = '#today';
@@ -197,7 +281,7 @@ const actions = {
       return;
     }
     ui.confirmClear = false;
-    ui.checkin = null;
+    ui.flow = null;
     state = clearState();
     toast('Everything on this device was cleared.');
     render();
@@ -219,6 +303,7 @@ const actions = {
     state.doses.push({ id: newId('dose'), prescriptionId: p.id, t: nowISO(), status: 'taken', note: '' });
     persist();
     toast(`${p.name} dose dispensed and logged.`);
+    document.dispatchEvent(new CustomEvent('aeronyx:dose'));
     render();
   },
   'skip-dose': (el) => {
@@ -248,6 +333,25 @@ const actions = {
     m.accepted = true;
     persist();
     toast(`${rx.name} added to your schedule.`);
+    render();
+  },
+  'chat-say': (el) => hear(el.dataset.text),
+  'chat-checkin': () => {
+    ui.flow = null;
+    askStep(0);
+    persist();
+    render();
+  },
+  'chat-rate': (el) => {
+    if (!ui.flow) return;
+    answerStep(Number.parseInt(el.dataset.value, 10));
+    persist();
+    render();
+  },
+  'chat-clear': () => {
+    state.chat = [];
+    ui.flow = null;
+    persist();
     render();
   },
   'start-breathing': () => startBreathing(),
@@ -280,34 +384,11 @@ const forms = {
     state.readings.push(reading);
     persist();
     toast(`${indicator.name} saved.`);
+    if (usesSampleSubmitter(indicator)) document.dispatchEvent(new CustomEvent('aeronyx:sample'));
     render();
   },
-  checkin: (form) => {
-    const data = new FormData(form);
-    let score;
-    try {
-      score = scoreCheckin({
-        mood: data.get('mood'),
-        stress: data.get('stress'),
-        loneliness: data.get('loneliness'),
-        text: data.get('text'),
-      });
-    } catch (err) {
-      toast(err.message);
-      return;
-    }
-    const now = nowISO();
-    // The ratings are stored. What was typed is used once for the safety check and then dropped.
-    const entry = { id: newId('c'), t: now, mood: score.mood, stress: score.stress, loneliness: score.loneliness, level: score.level, activity: null };
-    state.checkins.push(entry);
-    state.readings.push({ id: newId('r'), indicatorId: 'mood', t: now, value: score.mood, source: 'check-in', note: 'From a check-in' });
-    const sustained = sustainedLow(state.checkins, state.profile.baselines.mood);
-    ui.checkin = { score, reply: astroReply(score, { sustained }), activities: pickActivities(score) };
-    if (score.level === LEVEL.HANDOFF) sendReport('Sent automatically: Astro handed a check-in off to people.', true);
-    persist();
-    render();
-    const chat = main.querySelector('.chat');
-    if (chat) chat.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  chat: (form) => {
+    hear(new FormData(form).get('text'));
   },
   'note-home': (form) => {
     const text = String(new FormData(form).get('text') || '').trim().slice(0, 2000);
@@ -402,7 +483,7 @@ main.addEventListener('input', (event) => {
 window.addEventListener('hashchange', () => {
   stopBreathing();
   ui.confirmClear = false;
-  if (route().name !== 'checkin') ui.checkin = null;
+  if (route().name !== 'astro') ui.flow = null;
   render();
   window.scrollTo(0, 0);
 });
@@ -421,4 +502,5 @@ window.setInterval(() => {
   if (route().name === 'environment') render({ keepFields: true });
 }, 30000);
 
+initDevice();
 render();

@@ -1,4 +1,4 @@
-// Astro health companion: simulated demo data.
+// Aeronyx: simulated demo data.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //
@@ -53,6 +53,7 @@ export function emptyState() {
     notesHome: [],
     outbox: [],
     inbox: [],
+    chat: [],
   };
 }
 

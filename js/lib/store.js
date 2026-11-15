@@ -1,4 +1,4 @@
-// Astro health companion: storage. Everything stays in this browser.
+// Aeronyx: storage. Everything stays in this browser.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 
@@ -14,7 +14,7 @@ function merge(saved) {
   state.profile = { ...base.profile, ...(saved.profile || {}) };
   state.profile.baselines = { ...(saved.profile && saved.profile.baselines ? saved.profile.baselines : {}) };
   state.inventory = { ...defaultInventory(), ...(saved.inventory || {}) };
-  for (const key of ['readings', 'prescriptions', 'doses', 'checkins', 'notesHome', 'outbox', 'inbox']) {
+  for (const key of ['readings', 'prescriptions', 'doses', 'checkins', 'notesHome', 'outbox', 'inbox', 'chat']) {
     if (!Array.isArray(state[key])) state[key] = [];
   }
   return state;
@@ -27,6 +27,20 @@ export function loadState() {
   } catch (err) {
     // Private browsing or a blocked store: carry on in memory.
     return emptyState();
+  }
+}
+
+const SEEN = 'aeronyx.seen.v1';
+
+// True once, the first time this browser opens the app with nothing saved.
+export function isFirstVisit() {
+  try {
+    const store = window.localStorage;
+    const first = store.getItem(SEEN) === null && store.getItem(KEY) === null;
+    store.setItem(SEEN, '1');
+    return first;
+  } catch (err) {
+    return false;
   }
 }
 

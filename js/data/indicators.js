@@ -1,4 +1,4 @@
-// Astro health companion: indicator definitions.
+// Aeronyx: indicator definitions.
 //
 // AI disclosure: this file was written with an AI coding assistant (Claude)
 // to the team's specification. See AI-USE.md.
@@ -67,7 +67,7 @@ export const LIMIT_SOURCES = Object.freeze({
   self: 'Self-rating (NASA publishes no number)',
 });
 
-const CLINICAL_NOTE = 'NASA publishes no numeric in-flight limit for this indicator, so Astro shows the standard adult clinical range used on Earth. Your flight surgeon sets the limits that apply to you.';
+const CLINICAL_NOTE = 'NASA publishes no numeric in-flight limit for this indicator, so Aeronyx shows the standard adult clinical range used on Earth. Your flight surgeon sets the limits that apply to you.';
 const CLINICAL_SUMMARY = 'No NASA number. Standard adult clinical range.';
 
 // Rule order matters: the first matching rule wins. Anything unmatched is "ok".
@@ -173,7 +173,7 @@ export const INDICATORS = [
     rules: [],
     baseline: { mode: 'pct', direction: 'down', watch: 5, attention: 10 },
     limitSource: 'clinical',
-    limitSummary: 'No NASA limit. Astro flags a loss of 5 percent and of 10 percent from preflight mass.',
+    limitSummary: 'No NASA limit. Aeronyx flags a loss of 5 percent and of 10 percent from preflight mass.',
     limitNote: 'Compared with your preflight mass. ISS crews typically lose 1 to 5 percent; a loss above 10 percent is treated as clinically significant on Earth. NASA publishes no numeric in-flight limit.',
     why: 'Crews tend to eat less than they need. In 25 ISS crew members body mass fell by about 3 to 4 percent on average, almost all of it in the first 30 days.',
     how: 'Use the mass measurement device: wrap your legs around the guide arm, hold still and release the spring. Repeat three times and enter the average.',
@@ -332,7 +332,7 @@ export const INDICATORS = [
     limitSource: 'nasa-reference',
     limitSummary: 'Normal reference under 300 mg a day for men and under 250 for women.',
     limitRef: SRC.renalEvidence,
-    limitNote: 'NASA\'s renal stone evidence report lists a normal reference of under 300 mg a day for men and under 250 for women, and counts more than 250 mg a day as hypercalciuria in its crew statistics. NASA publishes no higher alert level, so Astro marks high values for watching.',
+    limitNote: 'NASA\'s renal stone evidence report lists a normal reference of under 300 mg a day for men and under 250 for women, and counts more than 250 mg a day as hypercalciuria in its crew statistics. NASA publishes no higher alert level, so Aeronyx marks high values for watching.',
     why: 'Bone breaks down faster in weightlessness and the calcium leaves through the urine. Bone density itself cannot be measured in orbit, so this is the closest in-flight signal.',
     how: 'Run the 24-hour collection sample on the onboard analyzer when the panel is scheduled.',
     actions: {
@@ -382,7 +382,7 @@ export const INDICATORS = [
     limitSource: 'nasa-reference',
     limitSummary: 'Adults need 7 to 9 hours. Crews average 6 to 6.5 in flight. No single-night alert value.',
     limitRef: SRC.sleepBrief,
-    limitNote: 'NASA\'s sleep brief (OCHMO-TB-041, Revision B) says an average adult needs 7 to 9 hours and reports an in-flight average of 6 to 6.5 hours. NASA publishes no alert value for a single night, so Astro marks short nights for watching.',
+    limitNote: 'NASA\'s sleep brief (OCHMO-TB-041, Revision B) says an average adult needs 7 to 9 hours and reports an in-flight average of 6 to 6.5 hours. NASA publishes no alert value for a single night, so Aeronyx marks short nights for watching.',
     why: 'Crews are scheduled 8.5 hours of sleep and get about 6. Short nights were linked to slower reactions and more stress in ISS data.',
     how: 'Enter last night\'s sleep from your actigraphy watch, or your best estimate from lights-out to wake-up minus time spent awake.',
     actions: {
@@ -408,7 +408,7 @@ export const INDICATORS = [
     chart: { lo: 6, hi: 10 },
     limitSource: 'self',
     limitSummary: 'No NASA number. Compared with your own usual rating.',
-    limitNote: 'A self-rating with no clinical threshold. Astro compares it with your own usual rating.',
+    limitNote: 'A self-rating with no clinical threshold. Aeronyx compares it with your own usual rating.',
     why: 'Isolation, confinement and distance from home are among NASA\'s five hazards of spaceflight. In six-month ISS data mood stayed broadly stable while stress ratings rose each quarter.',
     how: 'Rate how you have felt overall today, from 1 (very low) to 10 (very good). There is no right answer.',
     actions: {

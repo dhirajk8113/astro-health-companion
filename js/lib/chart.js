@@ -1,4 +1,4 @@
-// Astro health companion: a small SVG line chart with no dependencies.
+// Aeronyx: a small SVG line chart with no dependencies.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 

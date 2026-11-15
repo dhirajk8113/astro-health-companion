@@ -1,4 +1,4 @@
-// Astro health companion: screens, built as HTML strings from the state.
+// Aeronyx: screens, built as HTML strings from the state.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 
@@ -9,10 +9,12 @@ import { summarise, isMeasured } from './lib/spaceweather.js';
 import { ISS_ITEMS, cabinStatus, formatAge } from './lib/isslive.js';
 import { MEDICATIONS, getMedication } from './data/medications.js';
 import {
-  overview, counts, astroSummary, readingsFor, assessReading, trend, beforeAfter,
+  overview, counts, readingsFor, assessReading, trend, beforeAfter,
   adherence, nextDose, commDelay, MISSIONS, buildReport, lowerFirst,
 } from './lib/assess.js';
-import { BOUNDARY, LEVEL } from './lib/checkin.js';
+import { BOUNDARY, LEVEL, ACTIVITIES } from './lib/checkin.js';
+import { OPENING } from './lib/chat.js';
+import { gaugeFor, gaugePosition } from './lib/gauge.js';
 import { lineChart } from './lib/chart.js';
 
 export function esc(s) {
@@ -58,7 +60,8 @@ function fmtDelta(indicator, delta) {
 
 function simulatedBanner(state) {
   if (!state.profile.simulated) return '';
-  return `<div class="banner banner-sim" role="note"><strong>Simulated data.</strong> The readings are invented for the demo${state.readings.some((r) => r.source === 'radlab') ? ', with one exception: the radiation dose replays real ISS detector measurements from NASA\'s RadLab' : ''}. No reading comes from a real person.</div>`;
+  const real = state.readings.some((r) => r.source === 'radlab');
+  return `<div class="banner banner-sim" role="note"><strong>Simulated data.</strong> Invented for the demo${real ? ', with one exception: the radiation dose is real ISS detector data from NASA' : ''}.</div>`;
 }
 
 function sourceLinks(sources) {
@@ -67,68 +70,62 @@ function sourceLinks(sources) {
 
 // ---------- Today ----------
 
+const STATUS_RANK = { [STATUS.ATTENTION]: 0, [STATUS.WATCH]: 1, [STATUS.OK]: 2 };
+
+// One reading as a marker on a bar. The green band is the safe range.
+function gaugeRow(item, baselines) {
+  const { indicator, latest, assessment } = item;
+  const gauge = gaugeFor(indicator, baselines[indicator.id]);
+  const href = `#readings/${esc(indicator.id)}`;
+  if (!assessment) {
+    return `<a class="gauge gauge-none" href="${href}">
+      <span class="gauge-top"><span class="gauge-name">${esc(gauge.short)}</span><span class="gauge-value muted">No reading yet</span></span>
+      <span class="gauge-bar" aria-hidden="true"></span>
+    </a>`;
+  }
+  const pos = gaugePosition(gauge, Number(latest.value));
+  const bar = pos
+    ? `<span class="gauge-band" style="left:${pos.bandLeft}%;width:${pos.bandWidth}%"></span><span class="gauge-mark" style="left:${pos.marker}%"></span>`
+    : '';
+  return `<a class="gauge gauge-${esc(assessment.status)}" href="${href}">
+      <span class="gauge-top"><span class="gauge-name">${esc(gauge.short)}</span><span class="gauge-value"><strong>${esc(fmtValue(indicator, latest))}</strong> <span class="gauge-unit">${esc(gauge.unit)}</span></span></span>
+      <span class="gauge-bar" aria-hidden="true">${bar}</span>
+      <span class="sr-only">${STATUS_TEXT[assessment.status]}</span>
+    </a>`;
+}
+
 export function viewToday(state, env = null) {
   const items = overview(state);
   const c = counts(items);
-  const flagged = items
-    .filter((i) => i.assessment && i.assessment.status !== STATUS.OK)
-    .sort((a, b) => (a.assessment.status === STATUS.ATTENTION ? -1 : 1) - (b.assessment.status === STATUS.ATTENTION ? -1 : 1));
-
-  const flaggedHtml = flagged.length
-    ? `<section class="card">
-        <h2>Worth a look</h2>
-        <ul class="flag-list">
-          ${flagged.map((i) => `
-            <li class="flag flag-${esc(i.assessment.status)}">
-              <div class="flag-head">
-                ${pill(i.assessment.status)}
-                <a href="#readings/${esc(i.indicator.id)}"><strong>${esc(i.indicator.name)}</strong></a>
-                <span class="value">${esc(fmtValue(i.indicator, i.latest))} ${esc(i.indicator.unit)}</span>
-              </div>
-              <p class="muted">${esc(i.assessment.reason.charAt(0).toUpperCase() + i.assessment.reason.slice(1))}.</p>
-              <p><strong>What to do:</strong> ${esc(i.indicator.actions[i.assessment.status])}</p>
-            </li>`).join('')}
-        </ul>
-        <p><a class="button" href="#surgeon">Send a report to the flight surgeon</a></p>
-      </section>`
+  const any = items.some((i) => i.assessment);
+  const rank = (i) => (i.assessment ? STATUS_RANK[i.assessment.status] : 3);
+  // Readings that need attention first, then the ones to watch, then the rest in their usual order.
+  const sorted = items.map((item, index) => ({ item, index }))
+    .sort((a, b) => rank(a.item) - rank(b.item) || a.index - b.index)
+    .map((x) => x.item);
+  const half = Math.ceil(sorted.length / 2);
+  const column = (list) => `<div class="gauge-col">${list.map((i) => gaugeRow(i, state.profile.baselines)).join('')}</div>`;
+  const chips = any
+    ? `${c.attention ? `<span class="chip chip-attention">${c.attention} ${c.attention === 1 ? 'needs' : 'need'} attention</span>` : ''}
+       ${c.watch ? `<span class="chip chip-watch">${c.watch} to watch</span>` : ''}
+       <span class="chip chip-ok">${c.ok} in range</span>
+       ${c.none ? `<span class="chip">${c.none} with no reading</span>` : ''}`
     : '';
 
-  const groupsHtml = GROUPS.map((g) => {
-    const cards = items.filter((i) => i.indicator.group === g.id).map((i) => {
-      const body = i.assessment
-        ? `<div class="reading"><span class="value big">${esc(fmtValue(i.indicator, i.latest))}</span> <span class="unit">${esc(i.indicator.unit)}</span></div>
-           ${pill(i.assessment.status)}
-           <p class="muted small">${esc(fmtDelta(i.indicator, i.assessment.delta))} ${esc(TREND_TEXT[i.trend.direction])}</p>
-           <p class="muted small">${esc(fmtWhen(i.latest.t))}</p>`
-        : '<p class="muted">No reading yet</p>';
-      return `<a class="tile" href="#readings/${esc(i.indicator.id)}">
-          <h3>${esc(i.indicator.name)}</h3>
-          ${body}
-        </a>`;
-    }).join('');
-    return `<section><h2>${esc(g.name)}</h2><div class="tiles">${cards}</div></section>`;
-  }).join('');
-
   return `
-    ${simulatedBanner(state)}
     ${weatherBanner(env)}
-    <section class="card astro">
-      <div class="astro-face" aria-hidden="true">A</div>
-      <div>
-        <h1>Hello, ${esc(state.profile.name)}</h1>
-        <p class="lead">${esc(astroSummary(items))}</p>
-        <p class="muted small">${c.attention} need attention · ${c.watch} to watch · ${c.ok} in range${c.none ? ` · ${c.none} with no reading` : ''}</p>
-      </div>
-    </section>
-    ${items.some((i) => i.assessment) ? '' : `<section class="card">
+    <div class="home-head">
+      <h1>Today</h1>
+      ${chips}
+    </div>
+    ${any ? '' : `<section class="card">
       <h2>Start here</h2>
       <p>Add your own readings under Readings, or load 60 days of simulated data to see every screen working.</p>
       <button class="button" data-action="load-demo">Load simulated demo data</button>
       <a class="button secondary" href="#setup">Set my baselines</a>
     </section>`}
-    ${flaggedHtml}
-    ${groupsHtml}
-    <p class="boundary">${esc(BOUNDARY)}</p>`;
+    <div class="gauges">${column(sorted.slice(0, half))}${column(sorted.slice(half))}</div>
+    <p class="gauge-key"><span class="gauge-key-band" aria-hidden="true"></span>Green is the safe range, from NASA where NASA publishes one. Tap a reading for what to do.</p>`;
 }
 
 // ---------- Readings ----------
@@ -200,7 +197,7 @@ export function viewReadings(state, selectedId) {
 
         ${crewPanel(indicator)}
         <section class="card">
-          <h2>Why Astro tracks this</h2>
+          <h2>Why this is tracked</h2>
           <p>${esc(indicator.why)}</p>
           <ul class="sources">${sourceLinks(indicator.sources)}</ul>
         </section>
@@ -270,7 +267,7 @@ export function viewMeds(state, nowISO) {
     ${simulatedBanner(state)}
     <section class="card">
       <h1>Medications</h1>
-      <p>Astro does not choose medications or doses. Prescriptions come from your flight surgeon and are filled from the kit on board. Astro tracks each dose and reports how the linked reading has moved.</p>
+      <p>Aeronyx does not choose medications or doses. Your flight surgeon prescribes; Aeronyx tracks each dose and how the linked reading moved.</p>
       <p class="muted small">The dispenser is simulated in this demo: pressing the button records the dose and takes one unit out of the kit count.</p>
     </section>
     ${active || '<section class="card"><p class="muted">No active prescriptions. When your flight surgeon sends one, it appears under Flight surgeon.</p></section>'}
@@ -281,72 +278,79 @@ export function viewMeds(state, nowISO) {
     </section>`;
 }
 
-// ---------- Check-in ----------
+// ---------- Astro, the chat companion ----------
 
-function slider(name, label, min, max, value, lowText, highText) {
-  return `<label class="slider">${esc(label)}
-    <input type="range" name="${esc(name)}" min="${min}" max="${max}" step="1" value="${value}" data-output="${esc(name)}-out">
-    <span class="slider-ends"><span>${esc(lowText)}</span><output id="${esc(name)}-out">${value}</output><span>${esc(highText)}</span></span>
-  </label>`;
+// A calm, simple face for Astro. Drawn here, not an image file.
+function astroAvatar() {
+  return '<svg class="astro-avatar" viewBox="0 0 48 48" aria-hidden="true"><circle class="face" cx="24" cy="24" r="22"/><circle class="eye" cx="17" cy="21" r="2.4"/><circle class="eye" cx="31" cy="21" r="2.4"/><path class="smile" d="M16 29c2.5 3 5 4.2 8 4.2s5.5-1.2 8-4.2"/></svg>';
 }
 
-export function viewCheckin(state, ui = {}) {
-  const baselineMood = state.profile.baselines.mood;
-  let result = '';
-  if (ui.result) {
-    const { reply, activities, score } = ui.result;
-    const acts = score.level === LEVEL.HANDOFF ? '' : `
-      <div class="activities">
-        ${activities.map((a) => `
-          <details class="activity">
-            <summary><strong>${esc(a.name)}</strong> <span class="muted">about ${a.minutes} min</span></summary>
-            <ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
-            ${a.id === 'breathing' ? '<button class="button secondary" data-action="start-breathing">Start a two-minute guide</button><p id="breathing-guide" class="breathing" aria-live="polite"></p>' : ''}
-            ${a.id === 'message' ? `<form data-form="note-home"><label>Your note (kept on this device only)<textarea name="text" rows="4" maxlength="2000"></textarea></label><button class="button secondary" type="submit">Save note</button></form>` : ''}
-            <button class="link" data-action="activity-done" data-id="${esc(a.id)}">I did this</button>
-          </details>`).join('')}
-      </div>`;
-    result = `<section class="card chat" aria-live="polite">
-      <div class="bubble bubble-astro${score.level === LEVEL.HANDOFF ? ' bubble-handoff' : ''}">
-        <h2>${esc(reply.title)}</h2>
-        ${reply.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
-      </div>
-      ${acts}
-      ${score.level === LEVEL.HANDOFF ? '<p><a class="button" href="#surgeon">See the flag that was sent</a></p>' : ''}
-    </section>`;
+function activityBlock(a) {
+  return `<details class="activity">
+      <summary><strong>${esc(a.name)}</strong> <span class="muted">about ${a.minutes} min</span></summary>
+      <ol>${a.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+      ${a.id === 'breathing' ? '<button class="button secondary" data-action="start-breathing">Start a two-minute guide</button><p id="breathing-guide" class="breathing" aria-live="polite"></p>' : ''}
+      ${a.id === 'message' ? '<form data-form="note-home"><label>Your note (kept on this tablet only)<textarea name="text" rows="4" maxlength="2000"></textarea></label><button class="button secondary" type="submit">Save note</button></form>' : ''}
+      <button class="link" data-action="activity-done" data-id="${esc(a.id)}">I did this</button>
+    </details>`;
+}
+
+export function viewAstro(state, ui = {}) {
+  const chat = state.chat || [];
+  const thread = [{ from: 'astro', text: OPENING }, ...chat.slice(-40)];
+  const bubbles = thread.map((m) => (m.from === 'astro'
+    ? `<div class="msg msg-astro${m.level === LEVEL.HANDOFF ? ' msg-handoff' : ''}">${astroAvatar()}<p class="msg-text">${esc(m.text)}</p></div>`
+    : `<div class="msg msg-me"><p class="msg-text">${esc(m.text)}</p></div>`)).join('');
+
+  const last = chat[chat.length - 1];
+  // A check-in question is answered by tapping a number.
+  const step = ui.flow ? ui.flow.step : null;
+  let scale = '';
+  if (step) {
+    const buttons = [];
+    for (let n = step.min; n <= step.max; n += 1) buttons.push(`<button type="button" data-action="chat-rate" data-value="${n}">${n}</button>`);
+    scale = `<div class="scale" role="group" aria-label="Pick a number from ${step.min} to ${step.max}">${buttons.join('')}</div>`;
   }
+  const offered = last && last.from === 'astro' && Array.isArray(last.activities)
+    ? last.activities.map((id) => ACTIVITIES.find((a) => a.id === id)).filter(Boolean)
+    : [];
+  const activities = offered.length ? `<div class="activities">${offered.map(activityBlock).join('')}</div>` : '';
+  const handoff = last && last.level === LEVEL.HANDOFF ? '<p><a class="button" href="#surgeon">See the flag that was sent</a></p>' : '';
 
   const history = [...state.checkins].sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 6).map((c) => `
     <tr><td>${esc(fmtWhen(c.t))}</td><td class="num">${c.mood}</td><td class="num">${c.stress}</td><td class="num">${c.loneliness}</td><td>${esc(c.level === LEVEL.HANDOFF ? 'Handed off to people' : c.level === LEVEL.SUPPORT ? 'Support offered' : 'Steady')}</td></tr>`).join('');
-
   const notes = (state.notesHome || []).slice(-3).reverse().map((n) => `<li><span class="muted small">${esc(fmtWhen(n.t))}</span><br>${esc(n.text)}</li>`).join('');
 
   return `
-    <section class="card astro">
-      <div class="astro-face" aria-hidden="true">A</div>
-      <div>
-        <h1>Check in with Astro</h1>
-        <p class="lead">Three quick ratings, then a short activity if you want one. It takes about a minute.</p>
-        <p class="muted small">${esc(BOUNDARY)}</p>
+    <section class="card chat">
+      <div class="astro-head">
+        ${astroAvatar()}
+        <div>
+          <h1>Astro</h1>
+          <p class="muted small">Here to listen, any time.</p>
+        </div>
       </div>
-    </section>
-    <section class="card">
-      <form data-form="checkin">
-        ${slider('mood', 'How has your mood been today?', 1, 10, Number.isFinite(baselineMood) ? baselineMood : 7, 'Very low', 'Very good')}
-        ${slider('stress', 'How stressed do you feel?', 0, 10, 3, 'Not at all', 'Extremely')}
-        ${slider('loneliness', 'How lonely or cut off do you feel?', 0, 10, 2, 'Not at all', 'Extremely')}
-        <label>Anything on your mind? (optional)
-          <textarea name="text" rows="3" maxlength="1000" placeholder="This stays on your device. It is never sent to the ground."></textarea>
-        </label>
-        <button type="submit" class="button">Check in</button>
+      <div class="thread" aria-live="polite">${bubbles}</div>
+      ${scale}
+      ${handoff}
+      ${step ? '' : `<div class="quick">
+        <button type="button" class="quick-main" data-action="chat-checkin">Start a check-in</button>
+        <button type="button" data-action="chat-say" data-text="I'm stressed">I'm stressed</button>
+        <button type="button" data-action="chat-say" data-text="I can't sleep">I can't sleep</button>
+        <button type="button" data-action="chat-say" data-text="I miss home">I miss home</button>
+      </div>`}
+      <form class="composer" data-form="chat">
+        <input type="text" name="text" maxlength="500" autocomplete="off" aria-label="Message to Astro" placeholder="${step ? 'Tap a number, or type one' : 'Tell Astro what is on your mind'}">
+        <button type="submit" class="button">Send</button>
       </form>
+      <p class="muted small">Astro is a scripted companion, not a person or a therapist. What you type stays on this tablet. ${chat.length ? '<button class="link" data-action="chat-clear">Clear the chat</button>' : ''}</p>
+      ${activities}
     </section>
-    ${result}
-    <section class="card">
-      <h2>Recent check-ins</h2>
+    <details class="report">
+      <summary>Recent check-ins</summary>
       ${history ? `<table><thead><tr><th>When</th><th class="num">Mood</th><th class="num">Stress</th><th class="num">Loneliness</th><th>Astro's response</th></tr></thead><tbody>${history}</tbody></table>` : '<p class="muted">No check-ins yet.</p>'}
-      <p class="muted small">Your flight surgeon sees these ratings in your report. What you type to Astro is not stored or sent.</p>
-    </section>
+      <p class="muted small">Your flight surgeon sees these ratings in your report, never what you typed.</p>
+    </details>
     ${notes ? `<section class="card"><h2>Notes home</h2><ul class="notes">${notes}</ul></section>` : ''}`;
 }
 
@@ -416,7 +420,7 @@ export function viewSurgeon(state, nowISO) {
     ${simulatedBanner(state)}
     <section class="card">
       <h1>Flight surgeon</h1>
-      <p>Astro shows you your readings. Your flight surgeon makes the medical decisions. Send a report whenever something needs a second pair of eyes.</p>
+      <p>Aeronyx shows you your readings. Your flight surgeon makes the medical decisions. Send a report whenever something needs a second pair of eyes.</p>
       <p class="muted">${esc(delay.name)}: ${esc(delayNow(state.profile.mission, nowISO).text)}</p>
       ${delay.oneWaySeconds >= 60 ? '<p class="banner banner-warn">At this distance a reply takes at least twice the one-way delay. For anything urgent, work through the onboard medical checklist with your crew medical officer while the report is in transit.</p>' : ''}
     </section>
@@ -470,7 +474,7 @@ export function viewSetup(state) {
         <label>Crew member name<input name="name" type="text" maxlength="60" value="${esc(state.profile.name)}"></label>
         <label>Mission<select name="mission">${missionOptions}</select></label>
         <h2>Preflight baselines</h2>
-        <p class="muted">Astro compares every reading with your own baseline as well as the reference range. Leave a field blank to skip it.</p>
+        <p class="muted">Aeronyx compares every reading with your own baseline as well as the reference range. Leave a field blank to skip it.</p>
         <div class="grid-form">${baselineRows}</div>
         <button type="submit" class="button">Save setup</button>
       </form>
@@ -490,7 +494,7 @@ export function viewAbout() {
   const hazardRows = Object.entries(HAZARDS).map(([id, name]) => {
     const tracked = INDICATORS.filter((i) => i.hazard === id).map((i) => lowerFirst(i.name));
     let what = tracked.join(', ');
-    if (id === 'distance') what = 'not an indicator: Astro shows the signal delay for the mission and tells you what to do while a report is in transit';
+    if (id === 'distance') what = 'not an indicator: Aeronyx shows the signal delay for the mission and tells you what to do while a report is in transit';
     if (id === 'isolation') what += ', plus stress and loneliness ratings from check-ins';
     return `<tr><td>${esc(name)}</td><td>${esc(what)}</td></tr>`;
   }).join('');
@@ -507,19 +511,19 @@ export function viewAbout() {
   const all = Object.values(SOURCES).map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a></li>`).join('');
   return `
     <section class="card">
-      <h1>About Astro</h1>
-      <p class="lead">Astro is a health companion for astronauts on long missions. It gathers readings, shows each one against a reference range and the crew member's own baseline, tracks prescribed medication, offers support on hard days, and keeps the flight surgeon informed.</p>
+      <h1>About Aeronyx</h1>
+      <p class="lead">Aeronyx is a health monitor for astronauts on long missions. It gathers readings, shows each one against the safe range and the crew member's own baseline, tracks prescribed medication, and keeps the flight surgeon informed. Astro is its chat companion: a calm, scripted voice to talk to about stress, with a short mental health check-in.</p>
       <p>${esc(BOUNDARY)}</p>
       <p>Built for the 2026 NASA Space Apps Challenge, "Create Health Monitoring Software for Astronauts on Space Missions".</p>
     </section>
     <section class="card">
-      <h2>How Astro maps to NASA's five hazards</h2>
-      <table><thead><tr><th>Hazard</th><th>What Astro follows</th></tr></thead><tbody>${hazardRows}</tbody></table>
+      <h2>How Aeronyx maps to NASA's five hazards</h2>
+      <table><thead><tr><th>Hazard</th><th>What Aeronyx follows</th></tr></thead><tbody>${hazardRows}</tbody></table>
       <p class="muted small">The five hazards and the health risks linked to them come from NASA's Human Research Program.</p>
     </section>
     <section class="card">
       <h2>Where each limit comes from</h2>
-      <p>Astro uses NASA's number wherever NASA publishes one. That covers ${nasaCount} of the ${INDICATORS.length} indicators: requirements in NASA-STD-3001, and reference values in NASA's medical briefs and evidence reports. For the rest NASA publishes no numeric in-flight limit, so Astro shows the standard adult clinical range and the crew member's own baseline.</p>
+      <p>Aeronyx uses NASA's number wherever NASA publishes one. That covers ${nasaCount} of the ${INDICATORS.length} indicators: requirements in NASA-STD-3001, and reference values in NASA's medical briefs and evidence reports. For the rest NASA publishes no numeric in-flight limit, so Aeronyx shows the standard adult clinical range and the crew member's own baseline.</p>
       <table><thead><tr><th>Indicator</th><th>Source of the limit</th><th>The limit</th><th>Document</th></tr></thead><tbody>${limitRows}</tbody></table>
       <p class="muted small">The NASA numbers were checked against their source documents on 14 November 2026. A reading outside a NASA reference value is marked "Watch"; a reading past a NASA standard, a NASA-stated risk line or NASA's lowest band is marked "Needs attention".</p>
     </section>
@@ -531,13 +535,15 @@ export function viewAbout() {
         <li>Real and saved in the app: the May 2024 solar storm (NASA DONKI), ISS dose measurements (NASA RadLab) and the Inspiration4 crew's blood chemistry ranges (NASA OSDR).</li>
         <li>The medication dispenser is simulated. Most kit items come from NASA's 2015 ISS medical kit list; the unit counts are demo values and the list is not a medical reference.</li>
         <li>The flight surgeon console is part of the demo so one person can show both ends of the loop.</li>
+        <li>The device drawn around the screen is a concept from the team's own sketch, drawn in code with an AI assistant. No hardware exists: the sample submitter and the medication dispenser only react on screen.</li>
+        <li>Astro is a scripted companion. Each reply is fixed wording chosen by the words typed. It is not a person, a therapist or an AI model, and what is typed stays on the tablet.</li>
         <li>Limits are NASA's wherever NASA publishes a number, and each one is labelled with its source. The others are standard adult clinical values used on Earth.</li>
         <li>Blood and urine panels assume an onboard analyzer that returns results from a small sample. Stool analysis has no in-flight analyzer today and is not included.</li>
       </ul>
     </section>
     <section class="card">
       <h2>Use of AI</h2>
-      <p>The concept is the team's own. The code, the background research and the wording on these screens were produced with an AI assistant (Claude) and reviewed by the team. The assistant also checked the concept against the challenge statement and suggested showing each reading against a personal baseline. Astro itself contains no AI model: every message it shows comes from a fixed rule, so it works with no link to Earth. Details are in AI-USE.md in the repository.</p>
+      <p>The concept is the team's own. The code, the background research and the wording on these screens were produced with an AI assistant (Claude) and reviewed by the team. The assistant also checked the concept against the challenge statement and suggested showing each reading against a personal baseline. Aeronyx contains no AI model: every message it shows, and every reply Astro gives, is fixed wording chosen by a rule, so it works with no link to Earth. Details are in AI-USE.md in the repository.</p>
     </section>
     <section class="card">
       <h2>Sources</h2>
@@ -604,7 +610,7 @@ function weatherCard(env, nowMs) {
     : ({
       live: w ? `Live from NASA DONKI, ${w.range[0]} to ${w.range[1]}.` : '',
       loading: 'Asking NASA DONKI for the last 30 days.',
-      failed: 'NASA DONKI could not be reached just now. Astro will try again in a few minutes.',
+      failed: 'NASA DONKI could not be reached just now. Aeronyx will try again in a few minutes.',
       idle: 'Not loaded yet.',
     })[env.donki.status];
   let body = '';
@@ -628,7 +634,7 @@ function weatherCard(env, nowMs) {
       <p class="muted">${esc(status)}</p>
       ${body}
       <button class="button secondary" data-action="toggle-replay">${env.replay ? 'Back to live data' : 'Replay the May 2024 storm'}</button>
-      <p class="muted small">Source: <a href="${esc(SOURCES.donki.url)}" target="_blank" rel="noopener">${esc(SOURCES.donki.label)}</a>. DONKI reports that an event happened and which instrument saw it. It carries no dose, so Astro never turns an event into a dose figure. Model forecasts are left out of the alert.</p>`;
+      <p class="muted small">Source: <a href="${esc(SOURCES.donki.url)}" target="_blank" rel="noopener">${esc(SOURCES.donki.label)}</a>. DONKI reports that an event happened and which instrument saw it. It carries no dose, so Aeronyx never turns an event into a dose figure. Model forecasts are left out of the alert.</p>`;
 }
 
 function doseCard(mission) {
@@ -668,7 +674,7 @@ function cabinCard(env, nowMs) {
       <h2>Cabin air and water, live from the ISS</h2>
       <p class="muted">${esc(state)} ${iss.state === 'closed' ? '<button class="link" data-action="iss-reconnect">Try again</button>' : ''}</p>
       <table><thead><tr><th>Reading</th><th class="num">Value</th><th>Last sent</th><th>Against NASA's limit</th></tr></thead><tbody>${rows}</tbody></table>
-      <p class="muted small">These are the station's own sensors, read from NASA's public telemetry feed while this screen is open. Each value carries the time the station last sent it, and a value older than 30 minutes is not judged. The limits are NASA-STD-3001 requirements from <a href="${esc(SOURCES.eclssBrief.url)}" target="_blank" rel="noopener">NASA's life support technical brief</a>; the carbon dioxide limit is a one-hour average, so a single reading is only an indication. On another vehicle Astro would read that vehicle's feed.</p>`;
+      <p class="muted small">These are the station's own sensors, read from NASA's public telemetry feed while this screen is open. Each value carries the time the station last sent it, and a value older than 30 minutes is not judged. The limits are NASA-STD-3001 requirements from <a href="${esc(SOURCES.eclssBrief.url)}" target="_blank" rel="noopener">NASA's life support technical brief</a>; the carbon dioxide limit is a one-hour average, so a single reading is only an indication. On another vehicle Aeronyx would read that vehicle's feed.</p>`;
 }
 
 function distanceCard(mission, nowISO) {
@@ -679,7 +685,7 @@ function distanceCard(mission, nowISO) {
       <h2>Distance from Earth</h2>
       <p>Mars is ${Math.round(au * AU_KM / 1e6)} million km from Earth today (${au.toFixed(2)} astronomical units). A message takes <strong>${esc(formatDelay(marsLightSeconds(date)))}</strong> each way, and across the cycle of the two orbits that ranges from about 3 to about 22 minutes.</p>
       <p>${esc(commDelay(mission).name)}, your mission: ${esc(mine.text)}</p>
-      <p class="muted small">Computed in the app from <a href="${esc(SOURCES.jplElements.url)}" target="_blank" rel="noopener">NASA JPL's approximate planetary positions</a>. A reply takes at least twice the one-way delay, which is why Astro tells you what to do while a report is in transit.</p>`;
+      <p class="muted small">Computed in the app from <a href="${esc(SOURCES.jplElements.url)}" target="_blank" rel="noopener">NASA JPL's approximate planetary positions</a>. A reply takes at least twice the one-way delay, which is why Aeronyx tells you what to do while a report is in transit.</p>`;
 }
 
 export function viewEnvironment(state, env, nowISO) {

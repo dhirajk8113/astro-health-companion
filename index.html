@@ -3,34 +3,70 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Astro: a health companion for astronauts</title>
-  <meta name="description" content="Astro gathers an astronaut's health readings, shows each one against a reference range and a personal baseline, tracks prescribed medication, offers support on hard days and keeps the flight surgeon informed. Built for the 2026 NASA Space Apps Challenge.">
+  <title>Aeronyx: health monitoring for astronauts</title>
+  <meta name="description" content="Aeronyx gathers an astronaut's health readings, shows each one against the safe range and a personal baseline, tracks prescribed medication and keeps the flight surgeon informed. Astro, its chat companion, offers support on hard days. Built for the 2026 NASA Space Apps Challenge.">
   <!-- AI disclosure: this page and its code were written with an AI coding assistant (Claude). See AI-USE.md. -->
+  <script>
+    // Decide before the first paint whether the concept device is drawn, so the page does not jump.
+    try { document.documentElement.dataset.device = localStorage.getItem('aeronyx.device.v1') === 'off' ? 'off' : 'on'; } catch (e) { document.documentElement.dataset.device = 'on'; }
+  </script>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="top">
-    <a class="brand" href="#today"><span class="brand-mark" aria-hidden="true">A</span> Astro <span class="brand-sub">health companion</span></a>
-    <nav class="tabs" aria-label="Sections">
-      <a data-nav="today" href="#today">Today</a>
-      <a data-nav="readings" href="#readings">Readings</a>
-      <a data-nav="meds" href="#meds">Medications</a>
-      <a data-nav="checkin" href="#checkin">Check-in</a>
-      <a data-nav="environment" href="#environment">Environment</a>
-      <a data-nav="surgeon" href="#surgeon">Flight surgeon</a>
-      <a data-nav="setup" href="#setup">Setup</a>
-      <a data-nav="about" href="#about">About</a>
-    </nav>
+    <a class="brand" href="#today"><span class="brand-mark" aria-hidden="true">A</span> Aeronyx</a>
+    <span id="demo-chip" class="chip chip-demo" title="The readings are simulated for the demo. The radiation dose is real ISS detector data." hidden>Demo data</span>
+    <span class="top-space"></span>
+    <a class="icon-link" data-nav="setup" href="#setup" aria-label="Setup" title="Setup">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg>
+    </a>
+    <a class="icon-link" data-nav="about" href="#about" aria-label="About" title="About">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
+    </a>
   </header>
+  <nav class="tabbar" aria-label="Sections">
+    <a data-nav="today" href="#today"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Today</a>
+    <a data-nav="readings" href="#readings"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Readings</a>
+    <a data-nav="meds" href="#meds"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="4"/><path d="M12 8v8"/></svg>Meds</a>
+    <a data-nav="astro" href="#astro"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>Astro</a>
+    <a data-nav="environment" href="#environment" aria-label="Space and cabin"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>Space</a>
+    <a data-nav="surgeon" href="#surgeon" aria-label="Flight surgeon"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-7z"/></svg>Surgeon</a>
+  </nav>
   <main id="main" tabindex="-1">
-    <noscript><p>Astro needs JavaScript to run.</p></noscript>
+    <noscript><p>Aeronyx needs JavaScript to run.</p></noscript>
   </main>
   <footer class="foot">
-    <p>Astro is a companion, not a doctor or a therapist. It does not diagnose or treat. Demo readings are simulated.</p>
-    <p>Built for the 2026 NASA Space Apps Challenge. Code written with an AI assistant; see the About page.</p>
+    <p>Aeronyx is a health monitor and Astro is its chat companion. Neither is a doctor or a therapist.</p>
+    <p>Built for the 2026 NASA Space Apps Challenge. Code written with an AI assistant; see About. <button type="button" class="link dv-show" data-device-toggle>Show the concept device</button></p>
   </footer>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- The concept device, drawn around the screen on wide windows. It follows the team's own sketch. No hardware exists. -->
+  <div class="dv" aria-hidden="true">
+    <div class="dv-case"></div>
+    <div class="dv-screen"></div>
+    <div class="dv-clips"><span></span><span></span><span></span><span></span></div>
+    <div class="dv-brand">AERONYX</div>
+    <div class="dv-led"></div>
+  </div>
+  <button type="button" class="dv-pod dv-sample" data-device-go="readings" aria-label="Sample submitter, concept only. Opens Readings.">
+    <span class="dv-port"></span>
+    <span class="dv-pod-label">SAMPLE</span>
+    <span class="dv-pod-led"></span>
+    <span class="dv-collar"></span>
+  </button>
+  <button type="button" class="dv-pod dv-meds" data-device-go="meds" aria-label="Medication dispenser, concept only. Opens Medications.">
+    <span class="dv-pod-label">MEDS</span>
+    <span class="dv-slot"></span>
+    <span class="dv-pill"></span>
+    <span class="dv-cup"></span>
+  </button>
+  <div class="dv-chin">
+    <span>Concept device, drawn with AI from the team's sketch. No hardware exists.</span>
+    <button type="button" data-device-toggle>Hide device</button>
+  </div>
+
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
