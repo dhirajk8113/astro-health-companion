@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Films the 30-second Aeronyx demo video from the real app running locally.
+"""Films the 30-second AeroNYX demo video from the real app running locally.
 
 AI disclosure: this script was written by an AI coding assistant (Claude).
 The video it produces is AI-made and carries a visible watermark saying so.
@@ -29,11 +29,11 @@ PROBE = set(int(x) for x in sys.argv[2].split(',')) if MODE == 'probe' and len(s
 
 SUBS = [
     'A message to Mars can take 20 minutes each way.',
-    "Aeronyx shows every reading against its safe range, using NASA's limits.",
+    "AeroNYX shows every reading against its safe range, using NASA's limits.",
     'It tracks each prescribed dose and how the reading moved afterwards.',
     'Astro, the chat companion, listens, runs a check-in and hands off to people.',
     'It reads real NASA data: space weather alerts, measured radiation dose and the live ISS cabin.',
-    'Reports cross the signal delay to the flight surgeon. Doctors decide, not Aeronyx.',
+    'Reports cross the signal delay to the flight surgeon. Doctors decide, not AeroNYX.',
     "Limits are NASA's. Readings are simulated. The device is a concept. Code written with AI.",
 ]
 SCENE_FRAMES = [75, 120, 150, 150, 165, 120, 105]  # 885 frames = 29.5 s
@@ -113,7 +113,7 @@ OVERLAY_JS = r"""
   const card = add('f-card', `
     <div id="f-title">
       <div class="mark">A</div>
-      <h1>Aeronyx</h1>
+      <h1>AeroNYX</h1>
       <p class="tag">Health monitoring for astronauts</p>
       <div class="link"><span class="planet earth"></span><span class="planet mars"></span><span class="signal"></span></div>
       <div class="ends"><span>Earth</span><span>Mars</span></div>
@@ -121,7 +121,7 @@ OVERLAY_JS = r"""
     </div>
     <div id="f-end">
       <div class="mark">A</div>
-      <h1>Aeronyx</h1>
+      <h1>AeroNYX</h1>
       <p class="url">dhirajk8113.github.io/astro-health-companion</p>
       <p class="small">Concept device: no hardware exists. Demo readings are simulated, except the radiation dose.<br>Code and video made with AI assistance.</p>
     </div>`);

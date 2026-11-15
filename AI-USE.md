@@ -4,9 +4,9 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 
 **Tool used:** Claude (Anthropic), as a chat and coding assistant.
 
-**Not used:** AI-generated photos or audio. No AI model runs inside the product; every message Aeronyx shows, and every reply Astro gives, is fixed wording chosen by a rule in the code.
+**Not used:** AI-generated photos or audio. No AI model runs inside the product; every message AeroNYX shows, and every reply Astro gives, is fixed wording chosen by a rule in the code.
 
-**Names:** the project was first called Astro. On Nov 15 the team named the device Aeronyx and kept Astro as the name of the chat companion. Earlier rows of this log use the old name.
+**Names:** the project was first called Astro. On Nov 15 the team named the device AeroNYX and kept Astro as the name of the chat companion. Earlier rows of this log use the old name.
 
 ## Who did what
 
@@ -17,7 +17,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 - The idea of "Astro", a companion for stress, anxiety and loneliness with calming activities, and the decision to present Astro as one health companion for both physical and mental health.
 - The boundary that the tool must not diagnose.
 - The device: a hand sketch (Nov 15) of a unit with a screen, a sample submitter on one side, a medication dispenser on the other and attachment points on top. The team chose the "as sketched" design from three variants the assistant drew.
-- The names: Aeronyx for the device, Astro for the chat companion.
+- The names: AeroNYX for the device, Astro for the chat companion.
 - Astro as a calming companion to talk to about stress, with a mental health check-in inside the chat.
 - The judgement that the first screens had too much text, and the choice of the gauge home screen from three looks the assistant drew.
 
@@ -58,8 +58,9 @@ Times are US Central.
 | Nov 14, 16:35 to 16:50 | The 30-second demo video, filmed from the real app by a script, with subtitles | The project demo link | An "AI-generated video" watermark on every frame; the SI field on the project page; this log |
 | Nov 14, 19:17 to 19:40 | Real NASA data features: retrieved and saved the data, wrote the code and the tests | `js/data/nasa-snapshots.js`, `js/lib/spaceweather.js`, `js/lib/isslive.js`, `js/lib/ephemeris.js`, the Environment screen | Disclosure comment in each file; source and retrieval date beside each dataset; this log |
 | Nov 14, 19:40 to 20:05 | Checked the new features on the live site and fixed two labels; re-filmed the demo video with the Environment screen | `js/lib/isslive.js`, `js/views.js`, `tools/film-demo.py`, the project demo link | An "AI-generated video" watermark on every frame; an on-screen note on the recorded cabin values; this log |
-| Nov 15, 08:10 to 09:00 | From the team's sketch: three device designs and three home-screen looks for the team to pick from; then the chosen device (Aeronyx), the gauge home screen, the bottom tab bar, the rename, and Astro as a scripted chat companion with a check-in | `index.html`, `css/styles.css`, `js/views.js`, `js/app.js`, `js/device.js`, `js/lib/gauge.js`, `js/lib/chat.js`, `js/lib/device.js`, `tests/astro.test.mjs` | A line on the device saying it is a concept drawn with AI; a line under the chat saying Astro is scripted; disclosure comment in each file; this log |
-| Nov 15, 09:00 to 09:10 | Re-filmed the 30-second demo video inside the Aeronyx device, with the gauge home screen, a dispensed dose and the Astro chat | `tools/film-demo.py`, the project demo link | An "AI-generated video" watermark on every frame; on-screen notes that the device is a concept and that the cabin values are a recording; this log |
+| Nov 15, 08:10 to 09:00 | From the team's sketch: three device designs and three home-screen looks for the team to pick from; then the chosen device (AeroNYX), the gauge home screen, the bottom tab bar, the rename, and Astro as a scripted chat companion with a check-in | `index.html`, `css/styles.css`, `js/views.js`, `js/app.js`, `js/device.js`, `js/lib/gauge.js`, `js/lib/chat.js`, `js/lib/device.js`, `tests/astro.test.mjs` | A line on the device saying it is a concept drawn with AI; a line under the chat saying Astro is scripted; disclosure comment in each file; this log |
+| Nov 15, 09:00 to 09:10 | Re-filmed the 30-second demo video inside the AeroNYX device, with the gauge home screen, a dispensed dose and the Astro chat | `tools/film-demo.py`, the project demo link | An "AI-generated video" watermark on every frame; on-screen notes that the device is a concept and that the cabin values are a recording; this log |
+| Nov 15, 09:15 to 09:25 | At the team's direction, changed the spelling of the device name to AeroNYX everywhere it is shown, and filmed the video again | The app, the README, `tools/film-demo.py`, the project demo link | As above |
 
 ## How AI output is marked in the project
 

@@ -1,4 +1,4 @@
-// Aeronyx: a small SVG line chart with no dependencies.
+// AeroNYX: a small SVG line chart with no dependencies.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 

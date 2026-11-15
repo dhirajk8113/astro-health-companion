@@ -1,4 +1,4 @@
-// Aeronyx: assessment logic.
+// AeroNYX: assessment logic.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //
@@ -222,7 +222,7 @@ export function astroSummary(items) {
   const urgent = flagged.filter((i) => i.assessment.status === STATUS.ATTENTION);
   const withData = items.filter((i) => i.assessment);
   if (!withData.length) {
-    return 'No readings yet. Add your first one, or load the simulated demo data to see how Aeronyx works.';
+    return 'No readings yet. Add your first one, or load the simulated demo data to see how AeroNYX works.';
   }
   if (!flagged.length) {
     return `All ${withData.length} indicators with readings are within their reference bands and close to your baseline.`;

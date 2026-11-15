@@ -1,6 +1,6 @@
-# Aeronyx: health monitoring for astronauts
+# AeroNYX: health monitoring for astronauts
 
-Aeronyx helps an astronaut on a long mission keep track of their own health. It gathers readings, shows each one against the safe range and the crew member's own preflight baseline, tracks prescribed medication, and keeps the flight surgeon informed. **Astro** is its chat companion: a calm, scripted voice to talk to about stress, with a short mental health check-in.
+AeroNYX helps an astronaut on a long mission keep track of their own health. It gathers readings, shows each one against the safe range and the crew member's own preflight baseline, tracks prescribed medication, and keeps the flight surgeon informed. **Astro** is its chat companion: a calm, scripted voice to talk to about stress, with a short mental health check-in.
 
 The project was first called Astro. The repository and the web address keep that name.
 
@@ -8,7 +8,7 @@ Built for the 2026 NASA Space Apps Challenge: **Create Health Monitoring Softwar
 
 **Live demo:** https://dhirajk8113.github.io/astro-health-companion/ (a first visit opens with the simulated demo data loaded)
 
-> Aeronyx is a health monitor and Astro is its chat companion. Neither is a doctor or a therapist, and neither diagnoses or treats. The demo readings are simulated, except the radiation dose.
+> AeroNYX is a health monitor and Astro is its chat companion. Neither is a doctor or a therapist, and neither diagnoses or treats. The demo readings are simulated, except the radiation dose.
 
 ## What it does
 
@@ -22,20 +22,20 @@ Built for the 2026 NASA Space Apps Challenge: **Create Health Monitoring Softwar
 | Flight surgeon | Send a structured report to the ground and receive replies and prescriptions, with the signal delay for the chosen mission (ISS, Moon or Mars). |
 | Setup | Enter preflight baselines, choose the mission, and load or clear the simulated demo data. |
 
-Aeronyx follows 13 indicators: resting heart rate, blood pressure, body temperature, body mass (from the mass measurement device), aerobic capacity, fasting glucose, vitamin D, blood potassium, urine volume, urinary calcium, mission radiation dose, sleep and mood.
+AeroNYX follows 13 indicators: resting heart rate, blood pressure, body temperature, body mass (from the mass measurement device), aerobic capacity, fasting glucose, vitamin D, blood potassium, urine volume, urinary calcium, mission radiation dose, sleep and mood.
 
 ## Boundaries
 
-- Aeronyx shows readings and tells the crew member when to involve a person. The flight surgeon makes the medical decisions.
-- Aeronyx never chooses a medication or a dose.
-- Everything Aeronyx shows, and every reply Astro gives, is fixed wording chosen by a rule in the code. There is no AI model inside the product, so it keeps working with no link to Earth.
+- AeroNYX shows readings and tells the crew member when to involve a person. The flight surgeon makes the medical decisions.
+- AeroNYX never chooses a medication or a dose.
+- Everything AeroNYX shows, and every reply Astro gives, is fixed wording chosen by a rule in the code. There is no AI model inside the product, so it keeps working with no link to Earth.
 - Astro is not a person or a therapist and says so. Words that signal a crisis always hand off to the crew medical officer and flag the flight surgeon.
 - What a crew member types to Astro stays in the browser on the device. Only the three check-in ratings are reported to the flight surgeon.
 - Everything is stored in the browser on the device. Nothing is uploaded.
 
 ## NASA data and resources used
 
-Aeronyx is organised around NASA's Human Research Program framework, and its limits are NASA's wherever NASA publishes a number. Each indicator is tied to one of the five hazards of human spaceflight, each limit is labelled with its source on screen, and the About screen lists all 13.
+AeroNYX is organised around NASA's Human Research Program framework, and its limits are NASA's wherever NASA publishes a number. Each indicator is tied to one of the five hazards of human spaceflight, each limit is labelled with its source on screen, and the About screen lists all 13.
 
 | Limit | NASA number | NASA document |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ Aeronyx is organised around NASA's Human Research Program framework, and its lim
 | Urinary calcium | Normal under 300 mg a day for men, under 250 for women | HRP Evidence Report: Risk of Renal Stone Formation |
 | Sleep | Adults need 7 to 9 hours; crews average 6 to 6.5 in flight | OCHMO-TB-041 Sleep Accommodations, Revision B |
 
-For the other seven indicators (resting heart rate, blood pressure, body temperature, body mass, fasting glucose, blood potassium and mood) NASA publishes no numeric in-flight limit, so Aeronyx shows the standard adult clinical range and the crew member's own baseline. The NASA numbers were checked against their source documents on 14 November 2026.
+For the other seven indicators (resting heart rate, blood pressure, body temperature, body mass, fasting glucose, blood potassium and mood) NASA publishes no numeric in-flight limit, so AeroNYX shows the standard adult clinical range and the crew member's own baseline. The NASA numbers were checked against their source documents on 14 November 2026.
 
 - [NASA Human Research Program: 5 Hazards of Human Spaceflight](https://www.nasa.gov/hrp/hazards/)
 - [NASA Human Research Program: Human Health and Performance Risks](https://www.nasa.gov/hrp/risks/)
@@ -62,9 +62,9 @@ For the other seven indicators (resting heart rate, blood pressure, body tempera
 
 ## Real NASA data in the app
 
-Aeronyx reads or carries seven pieces of real data. None of it is simulated.
+AeroNYX reads or carries seven pieces of real data. None of it is simulated.
 
-| Data | Source | How Aeronyx uses it | Live or saved |
+| Data | Source | How AeroNYX uses it | Live or saved |
 | --- | --- | --- | --- |
 | Space weather events | [NASA DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) | Environment screen: solar particle events, flares and storms from the last 30 days, with an alert on Today when instruments detect a particle event within 72 hours | Live, read by the browser |
 | The May 2024 solar storm | NASA DONKI | A replay that shows the alert working on a real storm | Saved in `js/data/nasa-snapshots.js` |
@@ -76,7 +76,7 @@ Aeronyx reads or carries seven pieces of real data. None of it is simulated.
 
 Most items in the medication kit are taken, with their strengths, from [NASA's ISS Medical Kit: Contents and Reference](https://www.nasa.gov/wp-content/uploads/2015/03/medical_kit_checklist_-_full_release.pdf) of 9 April 2015.
 
-Limits of this data: DONKI reports events and carries no dose, so Aeronyx never turns an event into a dose figure. The ISS detector dose is converted to dose equivalent with the quality factor published by the DOSIS 3D team and is a detector reading, not a personal dose. The Inspiration4 samples were taken before and after a three-day flight, never in flight. The 2015 kit list is historical.
+Limits of this data: DONKI reports events and carries no dose, so AeroNYX never turns an event into a dose figure. The ISS detector dose is converted to dose equivalent with the quality factor published by the DOSIS 3D team and is a detector reading, not a personal dose. The Inspiration4 samples were taken before and after a three-day flight, never in flight. The 2015 kit list is historical.
 
 ## Space agency partner and other resources
 
@@ -103,7 +103,7 @@ On a wide window the app is drawn inside a device: a screen with a sample submit
 
 ## Run it
 
-Aeronyx is a static site with no build step and no dependencies.
+AeroNYX is a static site with no build step and no dependencies.
 
 ```
 python3 -m http.server 8000

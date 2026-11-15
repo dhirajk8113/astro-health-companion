@@ -1,4 +1,4 @@
-// Aeronyx: tests for the real NASA data features.
+// AeroNYX: tests for the real NASA data features.
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

@@ -1,4 +1,4 @@
-// Aeronyx: screens, built as HTML strings from the state.
+// AeroNYX: screens, built as HTML strings from the state.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 
@@ -267,7 +267,7 @@ export function viewMeds(state, nowISO) {
     ${simulatedBanner(state)}
     <section class="card">
       <h1>Medications</h1>
-      <p>Aeronyx does not choose medications or doses. Your flight surgeon prescribes; Aeronyx tracks each dose and how the linked reading moved.</p>
+      <p>AeroNYX does not choose medications or doses. Your flight surgeon prescribes; AeroNYX tracks each dose and how the linked reading moved.</p>
       <p class="muted small">The dispenser is simulated in this demo: pressing the button records the dose and takes one unit out of the kit count.</p>
     </section>
     ${active || '<section class="card"><p class="muted">No active prescriptions. When your flight surgeon sends one, it appears under Flight surgeon.</p></section>'}
@@ -420,7 +420,7 @@ export function viewSurgeon(state, nowISO) {
     ${simulatedBanner(state)}
     <section class="card">
       <h1>Flight surgeon</h1>
-      <p>Aeronyx shows you your readings. Your flight surgeon makes the medical decisions. Send a report whenever something needs a second pair of eyes.</p>
+      <p>AeroNYX shows you your readings. Your flight surgeon makes the medical decisions. Send a report whenever something needs a second pair of eyes.</p>
       <p class="muted">${esc(delay.name)}: ${esc(delayNow(state.profile.mission, nowISO).text)}</p>
       ${delay.oneWaySeconds >= 60 ? '<p class="banner banner-warn">At this distance a reply takes at least twice the one-way delay. For anything urgent, work through the onboard medical checklist with your crew medical officer while the report is in transit.</p>' : ''}
     </section>
@@ -474,7 +474,7 @@ export function viewSetup(state) {
         <label>Crew member name<input name="name" type="text" maxlength="60" value="${esc(state.profile.name)}"></label>
         <label>Mission<select name="mission">${missionOptions}</select></label>
         <h2>Preflight baselines</h2>
-        <p class="muted">Aeronyx compares every reading with your own baseline as well as the reference range. Leave a field blank to skip it.</p>
+        <p class="muted">AeroNYX compares every reading with your own baseline as well as the reference range. Leave a field blank to skip it.</p>
         <div class="grid-form">${baselineRows}</div>
         <button type="submit" class="button">Save setup</button>
       </form>
@@ -494,7 +494,7 @@ export function viewAbout() {
   const hazardRows = Object.entries(HAZARDS).map(([id, name]) => {
     const tracked = INDICATORS.filter((i) => i.hazard === id).map((i) => lowerFirst(i.name));
     let what = tracked.join(', ');
-    if (id === 'distance') what = 'not an indicator: Aeronyx shows the signal delay for the mission and tells you what to do while a report is in transit';
+    if (id === 'distance') what = 'not an indicator: AeroNYX shows the signal delay for the mission and tells you what to do while a report is in transit';
     if (id === 'isolation') what += ', plus stress and loneliness ratings from check-ins';
     return `<tr><td>${esc(name)}</td><td>${esc(what)}</td></tr>`;
   }).join('');
@@ -511,19 +511,19 @@ export function viewAbout() {
   const all = Object.values(SOURCES).map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a></li>`).join('');
   return `
     <section class="card">
-      <h1>About Aeronyx</h1>
-      <p class="lead">Aeronyx is a health monitor for astronauts on long missions. It gathers readings, shows each one against the safe range and the crew member's own baseline, tracks prescribed medication, and keeps the flight surgeon informed. Astro is its chat companion: a calm, scripted voice to talk to about stress, with a short mental health check-in.</p>
+      <h1>About AeroNYX</h1>
+      <p class="lead">AeroNYX is a health monitor for astronauts on long missions. It gathers readings, shows each one against the safe range and the crew member's own baseline, tracks prescribed medication, and keeps the flight surgeon informed. Astro is its chat companion: a calm, scripted voice to talk to about stress, with a short mental health check-in.</p>
       <p>${esc(BOUNDARY)}</p>
       <p>Built for the 2026 NASA Space Apps Challenge, "Create Health Monitoring Software for Astronauts on Space Missions".</p>
     </section>
     <section class="card">
-      <h2>How Aeronyx maps to NASA's five hazards</h2>
-      <table><thead><tr><th>Hazard</th><th>What Aeronyx follows</th></tr></thead><tbody>${hazardRows}</tbody></table>
+      <h2>How AeroNYX maps to NASA's five hazards</h2>
+      <table><thead><tr><th>Hazard</th><th>What AeroNYX follows</th></tr></thead><tbody>${hazardRows}</tbody></table>
       <p class="muted small">The five hazards and the health risks linked to them come from NASA's Human Research Program.</p>
     </section>
     <section class="card">
       <h2>Where each limit comes from</h2>
-      <p>Aeronyx uses NASA's number wherever NASA publishes one. That covers ${nasaCount} of the ${INDICATORS.length} indicators: requirements in NASA-STD-3001, and reference values in NASA's medical briefs and evidence reports. For the rest NASA publishes no numeric in-flight limit, so Aeronyx shows the standard adult clinical range and the crew member's own baseline.</p>
+      <p>AeroNYX uses NASA's number wherever NASA publishes one. That covers ${nasaCount} of the ${INDICATORS.length} indicators: requirements in NASA-STD-3001, and reference values in NASA's medical briefs and evidence reports. For the rest NASA publishes no numeric in-flight limit, so AeroNYX shows the standard adult clinical range and the crew member's own baseline.</p>
       <table><thead><tr><th>Indicator</th><th>Source of the limit</th><th>The limit</th><th>Document</th></tr></thead><tbody>${limitRows}</tbody></table>
       <p class="muted small">The NASA numbers were checked against their source documents on 14 November 2026. A reading outside a NASA reference value is marked "Watch"; a reading past a NASA standard, a NASA-stated risk line or NASA's lowest band is marked "Needs attention".</p>
     </section>
@@ -543,7 +543,7 @@ export function viewAbout() {
     </section>
     <section class="card">
       <h2>Use of AI</h2>
-      <p>The concept is the team's own. The code, the background research and the wording on these screens were produced with an AI assistant (Claude) and reviewed by the team. The assistant also checked the concept against the challenge statement and suggested showing each reading against a personal baseline. Aeronyx contains no AI model: every message it shows, and every reply Astro gives, is fixed wording chosen by a rule, so it works with no link to Earth. Details are in AI-USE.md in the repository.</p>
+      <p>The concept is the team's own. The code, the background research and the wording on these screens were produced with an AI assistant (Claude) and reviewed by the team. The assistant also checked the concept against the challenge statement and suggested showing each reading against a personal baseline. AeroNYX contains no AI model: every message it shows, and every reply Astro gives, is fixed wording chosen by a rule, so it works with no link to Earth. Details are in AI-USE.md in the repository.</p>
     </section>
     <section class="card">
       <h2>Sources</h2>
@@ -610,7 +610,7 @@ function weatherCard(env, nowMs) {
     : ({
       live: w ? `Live from NASA DONKI, ${w.range[0]} to ${w.range[1]}.` : '',
       loading: 'Asking NASA DONKI for the last 30 days.',
-      failed: 'NASA DONKI could not be reached just now. Aeronyx will try again in a few minutes.',
+      failed: 'NASA DONKI could not be reached just now. AeroNYX will try again in a few minutes.',
       idle: 'Not loaded yet.',
     })[env.donki.status];
   let body = '';
@@ -634,7 +634,7 @@ function weatherCard(env, nowMs) {
       <p class="muted">${esc(status)}</p>
       ${body}
       <button class="button secondary" data-action="toggle-replay">${env.replay ? 'Back to live data' : 'Replay the May 2024 storm'}</button>
-      <p class="muted small">Source: <a href="${esc(SOURCES.donki.url)}" target="_blank" rel="noopener">${esc(SOURCES.donki.label)}</a>. DONKI reports that an event happened and which instrument saw it. It carries no dose, so Aeronyx never turns an event into a dose figure. Model forecasts are left out of the alert.</p>`;
+      <p class="muted small">Source: <a href="${esc(SOURCES.donki.url)}" target="_blank" rel="noopener">${esc(SOURCES.donki.label)}</a>. DONKI reports that an event happened and which instrument saw it. It carries no dose, so AeroNYX never turns an event into a dose figure. Model forecasts are left out of the alert.</p>`;
 }
 
 function doseCard(mission) {
@@ -674,7 +674,7 @@ function cabinCard(env, nowMs) {
       <h2>Cabin air and water, live from the ISS</h2>
       <p class="muted">${esc(state)} ${iss.state === 'closed' ? '<button class="link" data-action="iss-reconnect">Try again</button>' : ''}</p>
       <table><thead><tr><th>Reading</th><th class="num">Value</th><th>Last sent</th><th>Against NASA's limit</th></tr></thead><tbody>${rows}</tbody></table>
-      <p class="muted small">These are the station's own sensors, read from NASA's public telemetry feed while this screen is open. Each value carries the time the station last sent it, and a value older than 30 minutes is not judged. The limits are NASA-STD-3001 requirements from <a href="${esc(SOURCES.eclssBrief.url)}" target="_blank" rel="noopener">NASA's life support technical brief</a>; the carbon dioxide limit is a one-hour average, so a single reading is only an indication. On another vehicle Aeronyx would read that vehicle's feed.</p>`;
+      <p class="muted small">These are the station's own sensors, read from NASA's public telemetry feed while this screen is open. Each value carries the time the station last sent it, and a value older than 30 minutes is not judged. The limits are NASA-STD-3001 requirements from <a href="${esc(SOURCES.eclssBrief.url)}" target="_blank" rel="noopener">NASA's life support technical brief</a>; the carbon dioxide limit is a one-hour average, so a single reading is only an indication. On another vehicle AeroNYX would read that vehicle's feed.</p>`;
 }
 
 function distanceCard(mission, nowISO) {
@@ -685,7 +685,7 @@ function distanceCard(mission, nowISO) {
       <h2>Distance from Earth</h2>
       <p>Mars is ${Math.round(au * AU_KM / 1e6)} million km from Earth today (${au.toFixed(2)} astronomical units). A message takes <strong>${esc(formatDelay(marsLightSeconds(date)))}</strong> each way, and across the cycle of the two orbits that ranges from about 3 to about 22 minutes.</p>
       <p>${esc(commDelay(mission).name)}, your mission: ${esc(mine.text)}</p>
-      <p class="muted small">Computed in the app from <a href="${esc(SOURCES.jplElements.url)}" target="_blank" rel="noopener">NASA JPL's approximate planetary positions</a>. A reply takes at least twice the one-way delay, which is why Aeronyx tells you what to do while a report is in transit.</p>`;
+      <p class="muted small">Computed in the app from <a href="${esc(SOURCES.jplElements.url)}" target="_blank" rel="noopener">NASA JPL's approximate planetary positions</a>. A reply takes at least twice the one-way delay, which is why AeroNYX tells you what to do while a report is in transit.</p>`;
 }
 
 export function viewEnvironment(state, env, nowISO) {

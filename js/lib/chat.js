@@ -1,4 +1,4 @@
-// Aeronyx: what Astro, the chat companion, says back.
+// AeroNYX: what Astro, the chat companion, says back.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //

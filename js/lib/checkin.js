@@ -1,4 +1,4 @@
-// Aeronyx: check-in logic for Astro, the chat companion.
+// AeroNYX: check-in logic for Astro, the chat companion.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //
@@ -156,4 +156,4 @@ export function astroReply(score, { sustained = false } = {}) {
   return { title: 'Steady today.', lines };
 }
 
-export const BOUNDARY = 'Aeronyx is a health monitor and Astro is its chat companion. Neither is a doctor or a therapist, and neither diagnoses or treats. They show your readings, offer support, and tell you when to involve your crew medical officer, flight surgeon or behavioral health team.';
+export const BOUNDARY = 'AeroNYX is a health monitor and Astro is its chat companion. Neither is a doctor or a therapist, and neither diagnoses or treats. They show your readings, offer support, and tell you when to involve your crew medical officer, flight surgeon or behavioral health team.';

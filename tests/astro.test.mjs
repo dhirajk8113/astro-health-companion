@@ -1,4 +1,4 @@
-// Aeronyx: tests for the gauges, the Astro chat companion and the concept device.
+// AeroNYX: tests for the gauges, the Astro chat companion and the concept device.
 // Run with: npm test
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 
@@ -197,10 +197,10 @@ test('only blood and urine readings pass through the sample submitter', () => {
   assert.equal(usesSampleSubmitter(undefined), false);
 });
 
-test('the page names the device Aeronyx, the companion Astro, and labels the device a concept', () => {
+test('the page names the device AeroNYX, the companion Astro, and labels the device a concept', () => {
   const page = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(page, /<title>Aeronyx/);
-  assert.match(page, /class="dv-brand">AERONYX</);
+  assert.match(page, /<title>AeroNYX/);
+  assert.match(page, /class="dv-brand">AeroNYX</);
   assert.match(page, /data-nav="astro" href="#astro"/);
   assert.equal((page.match(/<a data-nav="\w+" href="#\w+"/g) || []).length, 6);
   assert.match(page, /Concept device, drawn with AI from the team's sketch\. No hardware exists\./);
