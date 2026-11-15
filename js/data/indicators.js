@@ -45,6 +45,16 @@ const SRC = {
   boneBrief: { label: 'NASA OCHMO medical brief: Bone Loss (OCHMO-MTB-013, Revision D)', url: 'https://www.nasa.gov/wp-content/uploads/2026/02/ochmo-mtb-013-bone-loss.pdf' },
   renalEvidence: { label: 'NASA Human Research Program evidence report: Risk of Renal Stone Formation', url: 'https://ntrs.nasa.gov/citations/20170004709' },
   sleepBrief: { label: 'NASA OCHMO technical brief: Sleep Accommodations (OCHMO-TB-041, Revision B)', url: 'https://www.nasa.gov/sites/default/files/atoms/files/sleep_accomodations_technical_brief_ochmo.pdf' },
+  radlab: { label: 'NASA Open Science Data Repository: RadLab radiation data', url: 'https://visualization.osdr.nasa.gov/radlab/gui/data-api/' },
+  dosis3d: { label: 'Berger et al. 2017: DOSIS and DOSIS 3D measurements with the DOSTEL instruments on the ISS (DLR, ESA Columbus)', url: 'https://www.swsc-journal.org/articles/swsc/abs/2017/01/swsc160046/swsc160046.html' },
+  donki: { label: 'NASA DONKI: Space Weather Database Of Notifications, Knowledge, Information', url: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/' },
+  artemisRad: { label: 'George et al. 2024: Space radiation measurements during the Artemis I lunar mission (Nature)', url: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11446838/' },
+  marsRad: { label: 'Southwest Research Institute: radiation measured on Curiosity\'s cruise to Mars (Zeitlin et al. 2013)', url: 'https://www.swri.org/newsroom/press-releases/swri-led-team-calculates-the-radiation-exposure-associated-trip-mars' },
+  eclssBrief: { label: 'NASA OCHMO technical brief: Environmental Control and Life Support System (OCHMO-TB-002)', url: 'https://www.nasa.gov/wp-content/uploads/2023/07/eclss-technical-brief-ochmo.pdf' },
+  issLive: { label: 'ISS Mimic: open-source dashboard on NASA\'s public ISS telemetry feed', url: 'https://iss-mimic.github.io/Mimic/' },
+  jplElements: { label: 'NASA JPL: Approximate Positions of the Planets', url: 'https://ssd.jpl.nasa.gov/planets/approx_pos.html' },
+  osd575: { label: 'NASA Open Science Data Repository: study OSD-575 (Inspiration4 blood chemistry)', url: 'https://osdr.nasa.gov/bio/repo/data/studies/OSD-575' },
+  medKit: { label: 'NASA ISS Medical Kit: Contents and Reference (9 April 2015)', url: 'https://www.nasa.gov/wp-content/uploads/2015/03/medical_kit_checklist_-_full_release.pdf' },
   bioAnalyzer: { label: 'Canadian Space Agency: Bio-Analyzer', url: 'https://asc-csa.gc.ca/eng/iss/bio-analyzer.asp' },
 };
 
@@ -224,7 +234,7 @@ export const INDICATORS = [
       watch: 'Confirm the sample was fasting and repeat tomorrow morning.',
       attention: 'If low and you feel shaky, sweaty or confused, eat fast-acting carbohydrate now and tell your crew medical officer. Send the result to the flight surgeon.',
     },
-    sources: [SRC.vascular, SRC.bioAnalyzer],
+    sources: [SRC.vascular, SRC.bioAnalyzer, SRC.osd575],
   },
   {
     id: 'vitd',
@@ -278,7 +288,7 @@ export const INDICATORS = [
       watch: 'Repeat the sample at the next scheduled panel and include it in your report.',
       attention: 'Tell your crew medical officer and send the result to the flight surgeon before your next dose.',
     },
-    sources: [SRC.renal, SRC.bioAnalyzer],
+    sources: [SRC.renal, SRC.bioAnalyzer, SRC.osd575],
   },
   {
     id: 'urine_vol',
@@ -345,6 +355,7 @@ export const INDICATORS = [
     ],
     limitSource: 'nasa-standard',
     limitSummary: 'Career effective dose below 600 mSv.',
+    dataNote: 'In the demo this reading is not simulated. It replays the daily dose measured by the DOSTEL-2 detector on the ISS from 15 February to 16 April 2022 (NASA RadLab), converted to dose equivalent with the quality factor published by the DOSIS 3D team. It is a detector reading, not a personal dose.',
     limitRef: SRC.std3001,
     limitNote: 'NASA-STD-3001 Volume 1, requirement V1 4030: total career effective dose from spaceflight shall be less than 600 mSv, for all ages and sexes. This figure covers the current mission only and excludes earlier flights. Radiation is tracked continuously by instruments; no body check can see it at mission-level doses.',
     why: 'Cosmic rays and solar particles pass through the hull, and shielding stops only a small share of the cosmic-ray dose. The health effects are long-term risks, so the number to follow is the running total.',
@@ -354,7 +365,7 @@ export const INDICATORS = [
       watch: 'Include the reading in your next report.',
       attention: 'Tell your crew medical officer and send a report to the flight surgeon and radiation team.',
     },
-    sources: [SRC.radiationBrief, SRC.srag],
+    sources: [SRC.radlab, SRC.dosis3d, SRC.radiationBrief, SRC.srag],
   },
   {
     id: 'sleep',
