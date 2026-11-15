@@ -70,7 +70,7 @@ export function demoState(nowISO, days = 60) {
   };
 
   const state = emptyState();
-  state.profile = { name: 'Demo crew member', mission: 'iss', simulated: true, baselines: { ...DEMO_BASELINES } };
+  state.profile = { name: 'Crew member', mission: 'iss', simulated: true, baselines: { ...DEMO_BASELINES } };
 
   let id = 0;
   const add = (indicatorId, day, hour, value, value2, source = 'simulated') => {

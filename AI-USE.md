@@ -25,6 +25,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 - A radiation warning bar on the Space screen that shows the level and warns when the dose reaches a hazardous limit, and a Space screen made of graphics instead of text.
 - A badge scan and a PIN, so that health information stays private.
 - Showing the onboard kit as a plain list, removing the line about who chooses medications, and removing the per-screen demo notes.
+- The direction for the video: a device that looks more like hardware, a specimen going into the sample port, the dispensed dose, the radiation alarm, a smaller AI mark, and the cuts needed to fit 30 seconds. The team chooses the device finish from three the assistant rendered.
 
 **What the AI assistant did**
 
@@ -69,6 +70,7 @@ Times are US Central.
 | Nov 15, 11:55 to 12:05 | After an audit against the five judging criteria, at the team's direction to close every gap: widened Astro's crisis word list and added a handoff for threats to others; a NASA tag and live space weather on the home screen; a simulated sample run for the sample submitter; a demo tour; long explanations moved behind "More"; tables and the readings list fixed for phones | `js/lib/checkin.js`, `js/lib/chat.js`, `js/lib/sample.js`, `js/views.js`, `js/app.js`, `css/styles.css`, `tests/astro.test.mjs` | The sample screen says the analysis is simulated; disclosure comment in each file; this log |
 | Nov 15, 12:05 to 12:15 | Re-filmed the demo video with a sample-run scene, published it on the site, and added four screenshots and two sections (one case, feasibility) to the README | `tools/film-demo.py`, `media/`, `README.md`, the project demo link | An "AI-generated video" watermark on every frame; on-screen notes for the concept device, the simulated analysis and the recorded cabin values; a line under the screenshots; this log |
 | Nov 15, 15:35 to 16:00 | At the team's direction: look A on the home screen (an icon per reading, counts as symbols); the Space screen redrawn as graphics with a radiation bar against NASA's 600 mSv career limit that turns red at the limit; Astro as a speaking character with three looks, written-out replies and the tablet's own voice; a badge scan and PIN lock; the onboard kit as a plain list; per-screen demo notes removed | `js/views.js`, `js/app.js`, `js/voice.js`, `js/lib/icons.js`, `js/lib/persona.js`, `js/lib/lock.js`, `css/styles.css`, `index.html`, `tests/` | Disclosure comment in each file; "Drawn with AI" under Astro's character and sprite; "Concept device, drawn with AI" on the device; the "Demo data" label in the header; the About screen |
+| Nov 15, 16:00 to 16:15 | At the team's direction, a more detailed drawing of the concept device for the video in three finishes (graphite, aluminium, white), with a specimen tube that goes into the sample port and a capsule that drops into the cup; new scenes for the badge and PIN, the radiation alarm and Astro speaking; the README pictures retaken | `tools/film-device.js`, `tools/film-demo.py`, `media/` | "AI-generated video · concept device" in the corner of every frame; the end card; this file |
 
 ## How AI output is marked in the project
 
@@ -80,6 +82,8 @@ Times are US Central.
 - Astro's voice is the browser's built-in speech, limited to voices that run on the device. It is not an AI model and sends nothing anywhere.
 - The badge scan is simulated; the About screen says so, and says that the lock does not encrypt the stored record.
 - The Astro screen says that Astro is a scripted companion, not a person or a therapist.
-- The demo video shows "AI-generated video" on every frame, and says in its last subtitle that the readings are simulated, that the device is a concept and that the code was written with AI.
-- The screenshots in the README are pictures of the running app, taken by a script. The home screen's live space weather label is left out of them and of the video, because the machine that takes them is offline.
-- The machine that renders the video has no internet access. The space weather shot therefore uses the app's own replay of the saved May 2024 storm, which the screen states. The ISS cabin shot shows values recorded from NASA's live feed on the deployed site on 14 Nov 2026, and the video says so on screen during that shot.
+- The demo video shows "AI-generated video · concept device" in the bottom-left corner of every frame. The team asked for the mark to be removed; it was made smaller and moved instead, because the challenge rules require it. The end card says that no hardware exists, that the readings are simulated except the radiation dose, and that the code and video were made with AI assistance.
+- The device in the video is a more detailed drawing than the one on the live site (`tools/film-device.js`). It is the same concept from the team's sketch and is still a drawing: the specimen tube, the analyser readout and the capsule are animation, not hardware.
+- In the radiation scene the dose climbing to the limit is a time-lapse drawn over the real bar. The red alarm that follows is the real screen after a test dosimeter reading of 612 mSv is saved. The subtitle says "if".
+- The machine that renders the video has no internet access. The space weather card in the video and in the README picture therefore replays the records NASA DONKI returned on the deployed site at 22:03 UTC on 15 Nov 2026. The video no longer shows the ISS cabin readings.
+- The pictures in the README are of the running app, taken by a script, with the same replayed space weather records.
