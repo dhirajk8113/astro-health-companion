@@ -86,6 +86,9 @@ test('ISS telemetry: updates, timestamps and limits', () => {
   assert.equal(cabinStatus(co2, 2.4, 17000).status, 'stale');
   assert.equal(cabinStatus(ISS_ITEMS.find((i) => i.id === 'USLAB000058'), 758, 1).status, 'info');
   assert.equal(cabinStatus(temp, NaN, NaN).status, 'none');
+  const tank = ISS_ITEMS.find((i) => i.id === 'NODE3000005');
+  assert.equal(cabinStatus(tank, 49, 73).status, 'info');
+  assert.equal(cabinStatus(tank, 49, 3000).status, 'stale');
   assert.equal(formatAge(0.2), 'seconds ago');
   assert.equal(formatAge(17300), '12 days ago');
 });
@@ -177,4 +180,9 @@ test('glucose and potassium show the Inspiration4 crew range, other readings do 
   assert.match(viewReadings(state, 'potassium'), /3\.5 to 5\.3 mmol\/L/);
   assert.doesNotMatch(viewReadings(state, 'hr'), /Inspiration4/);
   assert.match(viewReadings(state, 'dose'), /Real data\./);
+  assert.match(viewToday(state), /with one exception/);
+  const old = demoState(NOW);
+  old.readings.forEach((r) => { r.source = 'simulated'; });
+  assert.doesNotMatch(viewReadings(old, 'dose'), /Real data\./);
+  assert.doesNotMatch(viewToday(old), /with one exception/);
 });
