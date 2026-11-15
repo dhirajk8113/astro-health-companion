@@ -77,7 +77,7 @@ test('medication screen describes the trend without claiming cause', () => {
   assert.match(html, /Potassium citrate/);
   assert.match(html, /Dose due/);
   assert.match(html, /lower/);
-  assert.match(html, /does not prove the medication caused it/);
+  assert.match(html, /A trend, not proof of cause/);
   assert.match(html, /AeroNYX does not choose medications or doses/);
 });
 

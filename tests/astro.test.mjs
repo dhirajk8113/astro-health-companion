@@ -13,7 +13,9 @@ import { LEVEL, ACTIVITIES } from '../js/lib/checkin.js';
 import { chatReply, parseRating, CHECKIN_STEPS, OPENING, HANDOFF_TEXT } from '../js/lib/chat.js';
 import { gaugeFor, gaugePosition } from '../js/lib/gauge.js';
 import { deviceFits, loadDevicePref, saveDevicePref, usesSampleSubmitter } from '../js/lib/device.js';
-import { viewAstro } from '../js/views.js';
+import { viewAstro, viewToday, viewReadings, viewMeds, viewSample, viewEnvironment } from '../js/views.js';
+import { isCrisisText } from '../js/lib/checkin.js';
+import { PANELS, simulateSample } from '../js/lib/sample.js';
 
 const NOW = '2026-11-14T18:00:00.000Z';
 
@@ -207,4 +209,107 @@ test('the page names the device AeroNYX, the companion Astro, and labels the dev
   assert.match(page, /Neither is a doctor or a therapist/);
   const css = readFileSync(new URL('../css/styles.css', import.meta.url), 'utf8');
   assert.match(css, /@media \(min-width: 1000px\) and \(min-height: 600px\)/);
+});
+
+// ---------- judging pass ----------
+
+test('indirect crisis wording and threats to others hand off; everyday phrases do not', () => {
+  const handoff = [
+    "I'm thinking of ending things", 'life is not worth living', 'I might jump out the airlock', 'I want to disappear forever',
+    'I took too many pills', 'I want to hurt my crewmate', 'nobody would miss me if I was gone', "I've been cutting myself",
+    'no one would even notice if I died', 'I could punch the commander', 'they would be better off without me', 'I want to overdose',
+  ];
+  for (const text of handoff) {
+    assert.equal(isCrisisText(text), true, text);
+    assert.equal(chatReply(text).level, LEVEL.HANDOFF, text);
+  }
+  const everyday = [
+    'I could die of embarrassment', 'this food is killing me', "I'm dying to see my kids", 'I hit my head', 'I hurt my knee',
+    'nobody would care if I skipped exercise', 'I want to end the experiment early', 'I could kill for a coffee', 'I want to hit the gym',
+  ];
+  for (const text of everyday) assert.equal(isCrisisText(text), false, text);
+});
+
+test('Astro says what it can do when asked for help', () => {
+  for (const text of ['help', 'what can you do?', 'how does this work']) {
+    const r = chatReply(text);
+    assert.equal(r.topic, 'help', text);
+    assert.match(r.text, /check-in/);
+    assert.match(r.text, /crew medical officer/);
+  }
+  assert.equal(chatReply('I feel sick to my stomach').topic, 'physical');
+  assert.notEqual(chatReply('I am sick of this food').topic, 'physical');
+});
+
+test('a simulated sample run stays close to the last reading and inside the input limits', () => {
+  const state = demoState(NOW);
+  for (const kind of Object.keys(PANELS)) {
+    const results = simulateSample(kind, state, 12345);
+    assert.deepEqual(results.map((r) => r.indicatorId), PANELS[kind].ids);
+    assert.deepEqual(simulateSample(kind, state, 12345), results, 'the same seed gives the same values');
+    for (const r of results) {
+      const indicator = getIndicator(r.indicatorId);
+      const list = state.readings.filter((x) => x.indicatorId === r.indicatorId).sort((a, b) => a.t.localeCompare(b.t));
+      const last = list[list.length - 1].value;
+      assert.ok(Math.abs(r.value - last) <= Math.abs(last) * 0.035 + indicator.input.step, `${r.indicatorId}: ${r.value} is far from ${last}`);
+      assert.ok(r.value >= indicator.input.min && r.value <= indicator.input.max);
+      assert.ok(usesSampleSubmitter(indicator));
+    }
+  }
+  assert.notDeepEqual(simulateSample('blood', state, 1), simulateSample('blood', state, 2));
+  assert.deepEqual(simulateSample('saliva', state, 1), []);
+  // with no earlier reading the value starts inside the safe range
+  for (const r of simulateSample('blood', emptyState(), 7)) assert.equal(classify(getIndicator(r.indicatorId), r.value).status, 'ok');
+});
+
+test('the sample screen shows the choices, the analysis and the results, and says it is simulated', () => {
+  const state = demoState(NOW);
+  let html = viewSample(state);
+  assert.match(html, /Simulated: no analyser is connected/);
+  assert.equal((html.match(/data-action="run-sample"/g) || []).length, 2);
+  html = viewSample(state, { sample: { kind: 'blood', state: 'running' } });
+  assert.match(html, /Analysing the blood sample/);
+  assert.doesNotMatch(html, /data-action="run-sample"/);
+  const results = simulateSample('urine', state, 3);
+  html = viewSample(state, { sample: { kind: 'urine', state: 'done', results } });
+  assert.match(html, /Urine volume/);
+  assert.match(html, /Needs attention/);
+  assert.match(html, /Run another/);
+  assert.doesNotMatch(html, /undefined|NaN/);
+});
+
+test('the home screen marks NASA limits, carries the demo tour and stays short', () => {
+  const state = demoState(NOW);
+  const plain = viewToday(state);
+  // six readings use a NASA limit; the key explains the tag once more
+  assert.equal((plain.match(/class="tag-nasa"/g) || []).length, INDICATORS.filter((i) => String(i.limitSource).startsWith('nasa')).length + 1);
+  assert.equal(INDICATORS.filter((i) => String(i.limitSource).startsWith('nasa')).length, 6);
+  assert.doesNotMatch(plain, /Demo tour/);
+  const toured = viewToday(state, null, { tour: true });
+  assert.match(toured, /Demo tour/);
+  for (const href of ['#readings/urine_vol', '#surgeon', '#meds', '#sample', '#astro']) assert.ok(toured.includes(`href="${href}"`), href);
+  assert.doesNotMatch(viewToday(emptyState(), null, { tour: true }), /Demo tour/);
+  // space weather as one label: checking, not reachable, replay alert as a banner
+  assert.match(viewToday(state, { donki: { status: 'loading', data: null, at: 0 }, replay: false }), /Checking NASA space weather/);
+  assert.match(viewToday(state, { donki: { status: 'failed', data: null, at: 0 }, replay: false }), /NASA space weather not reachable/);
+  assert.match(viewToday(state, { donki: { status: 'idle', data: null, at: 0 }, replay: true }), /banner-warn/);
+});
+
+test('long explanations sit behind disclosures, and blood and urine readings offer a sample run', () => {
+  const state = demoState(NOW);
+  const visible = (html) => html.replace(/<details class="more">[\s\S]*?<\/details>/g, ' ').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+  const env = { donki: { status: 'idle', data: null, at: 0 }, replay: true, iss: { state: 'idle', values: {} } };
+  const meds = viewMeds(state, NOW);
+  const space = viewEnvironment(state, env, NOW);
+  assert.ok(visible(meds) < 330, `Medications shows ${visible(meds)} words`);
+  assert.ok(visible(space) < 420, `Space shows ${visible(space)} words`);
+  assert.ok((meds.match(/<details class="more">/g) || []).length >= 3);
+  assert.ok((space.match(/<details class="more">/g) || []).length >= 4);
+  // nothing was deleted: the sources and the caveats are still in the page
+  assert.match(meds, /That list is historical and is not the current formulary/);
+  assert.match(space, /so AeroNYX never turns an event into a dose figure/);
+  assert.match(space, /a scale, not a forecast/);
+  assert.match(viewReadings(state, 'glucose'), /href="#sample"/);
+  assert.match(viewReadings(state, 'urine_ca'), /href="#sample"/);
+  assert.doesNotMatch(viewReadings(state, 'hr'), /href="#sample"/);
 });

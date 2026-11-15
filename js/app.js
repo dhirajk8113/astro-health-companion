@@ -9,9 +9,10 @@ import { classify, commDelay, buildReport } from './lib/assess.js';
 import { scoreCheckin, sustainedLow, pickActivities, astroReply, isCrisisText, LEVEL } from './lib/checkin.js';
 import { chatReply, parseRating, CHECKIN_STEPS } from './lib/chat.js';
 import { usesSampleSubmitter } from './lib/device.js';
+import { PANELS, simulateSample } from './lib/sample.js';
 import { initDevice } from './device.js';
 import { loadState, saveState, clearState, isFirstVisit, newId } from './lib/store.js';
-import { viewToday, viewReadings, viewMeds, viewAstro, viewSurgeon, viewSetup, viewAbout, viewEnvironment } from './views.js';
+import { viewToday, viewReadings, viewMeds, viewAstro, viewSample, viewSurgeon, viewSetup, viewAbout, viewEnvironment } from './views.js';
 import { fetchDonki } from './lib/spaceweather.js';
 import { connectIss } from './lib/isslive.js';
 
@@ -23,7 +24,14 @@ if (isFirstVisit()) {
   saveState(state);
 }
 // flow: the check-in question Astro is waiting on, while one is being asked in the chat.
-const ui = { flow: null, confirmClear: false, breathing: null };
+// sample: a run of the sample submitter, while it is analysing or showing results.
+const ui = { flow: null, sample: null, confirmClear: false, breathing: null };
+
+// The demo tour on the home screen can be hidden for good.
+const TOUR_KEY = 'aeronyx.tour.v1';
+function tourOn() {
+  try { return window.localStorage.getItem(TOUR_KEY) !== 'off'; } catch (err) { return true; }
+}
 
 // Real NASA data that lives outside the saved state: space weather from DONKI
 // and the live ISS cabin feed. Neither is stored on the device.
@@ -124,11 +132,12 @@ function render({ keepFields = false } = {}) {
     case 'readings': html = viewReadings(state, r.arg); break;
     case 'meds': html = viewMeds(state, nowISO()); break;
     case 'astro': html = viewAstro(state, { flow: ui.flow }); break;
+    case 'sample': html = viewSample(state, { sample: ui.sample }); break;
     case 'surgeon': html = viewSurgeon(state, nowISO()); break;
     case 'setup': html = viewSetup(state); break;
     case 'about': html = viewAbout(); break;
     case 'environment': html = viewEnvironment(state, env, nowISO()); break;
-    default: html = viewToday(state, env);
+    default: html = viewToday(state, env, { tour: Boolean(state.profile.simulated) && tourOn() });
   }
   main.innerHTML = html;
   if (saved) restoreFields(saved);
@@ -138,8 +147,9 @@ function render({ keepFields = false } = {}) {
   const thread = main.querySelector('.thread');
   if (thread) thread.scrollTop = thread.scrollHeight;
   document.querySelectorAll('[data-nav]').forEach((a) => {
-    const on = a.dataset.nav === (r.name || 'today');
+    const on = a.dataset.nav === (r.name === 'sample' ? 'readings' : r.name || 'today');
     a.classList.toggle('active', on);
+    if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
   if (ui.confirmClear && r.name === 'setup') {
@@ -335,6 +345,33 @@ const actions = {
     toast(`${rx.name} added to your schedule.`);
     render();
   },
+  'tour-off': () => {
+    try { window.localStorage.setItem(TOUR_KEY, 'off'); } catch (err) { /* the tour simply shows again next time */ }
+    render();
+  },
+  // The sample submitter: a simulated analysis that logs one reading per indicator in the panel.
+  'run-sample': (el) => {
+    const kind = el.dataset.kind;
+    if (!PANELS[kind] || (ui.sample && ui.sample.state === 'running')) return;
+    ui.sample = { kind, state: 'running' };
+    document.dispatchEvent(new CustomEvent('aeronyx:sample'));
+    render();
+    window.setTimeout(() => {
+      const now = nowISO();
+      const results = simulateSample(kind, state, Date.now());
+      for (const r of results) {
+        state.readings.push({ id: newId('r'), indicatorId: r.indicatorId, t: now, value: r.value, source: 'simulated', note: 'Simulated sample run' });
+      }
+      ui.sample = { kind, state: 'done', results };
+      persist();
+      toast('Sample analysed. Results logged.');
+      if (route().name === 'sample') render();
+    }, 2600);
+  },
+  'sample-again': () => {
+    ui.sample = null;
+    render();
+  },
   'chat-say': (el) => hear(el.dataset.text),
   'chat-checkin': () => {
     ui.flow = null;
@@ -484,6 +521,7 @@ window.addEventListener('hashchange', () => {
   stopBreathing();
   ui.confirmClear = false;
   if (route().name !== 'astro') ui.flow = null;
+  if (route().name !== 'sample' && ui.sample && ui.sample.state === 'done') ui.sample = null;
   render();
   window.scrollTo(0, 0);
 });

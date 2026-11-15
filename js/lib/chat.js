@@ -32,8 +32,16 @@ const TOPICS = [
     replies: ["I'm Astro, a scripted companion on this tablet. I'm not a person or a therapist, but I can listen and help you reach one."],
   },
   {
+    id: 'help',
+    test: /^\s*help( me)?\b|\bwhat can you do\b|\bwhat do you do\b|\bhow does this work\b|\bhow can you help\b/i,
+    level: LEVEL.STEADY,
+    replies: ['I can listen, run a three-question check-in, and offer a breathing or grounding exercise. If it is urgent, your crew medical officer is the person to reach.'],
+    activities: ['breathing', 'grounding'],
+    checkin: true,
+  },
+  {
     id: 'physical',
-    test: /\b(pain|hurts?|aches?|dizzy|nausea|nauseous|vomit\w*|fever|bleeding|chest|headache|migraine|numbness)\b/i,
+    test: /\b(pain|hurts?|aches?|dizzy|nausea|nauseous|vomit\w*|threw up|throwing up|fever|bleeding|chest|headache|migraine|numbness|sick to my stomach)\b|\bfeel(?:ing)? sick\b(?! of)/i,
     level: LEVEL.STEADY,
     replies: ["That sounds physical, and I can't assess symptoms. Log it under Readings and tell your crew medical officer."],
   },
