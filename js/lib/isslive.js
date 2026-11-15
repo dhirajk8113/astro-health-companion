@@ -1,4 +1,4 @@
-// Astro health companion: live cabin readings from the International Space Station.
+// Aeronyx: live cabin readings from the International Space Station.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //

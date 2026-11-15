@@ -7,9 +7,9 @@ import assert from 'node:assert/strict';
 import { INDICATORS } from '../js/data/indicators.js';
 import { demoState, emptyState } from '../js/data/demo.js';
 import { buildReport } from '../js/lib/assess.js';
-import { scoreCheckin, astroReply, pickActivities } from '../js/lib/checkin.js';
 import { lineChart } from '../js/lib/chart.js';
-import { viewToday, viewReadings, viewMeds, viewCheckin, viewSurgeon, viewSetup, viewAbout, esc } from '../js/views.js';
+import { readFileSync } from 'node:fs';
+import { viewToday, viewReadings, viewMeds, viewAstro, viewSurgeon, viewSetup, viewAbout, esc } from '../js/views.js';
 
 const NOW = '2026-11-14T18:00:00.000Z';
 
@@ -27,7 +27,7 @@ test('every screen renders with demo data', () => {
   for (const i of INDICATORS) clean(viewReadings(state, i.id), `readings/${i.id}`);
   clean(viewReadings(state, 'not-a-real-id'), 'readings fallback');
   clean(viewMeds(state, NOW), 'meds');
-  clean(viewCheckin(state), 'checkin');
+  clean(viewAstro(state), 'astro');
   clean(viewSurgeon(state, NOW), 'surgeon');
   clean(viewSetup(state), 'setup');
   clean(viewAbout(), 'about');
@@ -39,25 +39,37 @@ test('every screen renders with no data at all', () => {
   assert.match(viewToday(state), /Load simulated demo data/);
   clean(viewReadings(state, 'bp'), 'readings');
   clean(viewMeds(state, NOW), 'meds');
-  clean(viewCheckin(state), 'checkin');
+  clean(viewAstro(state), 'astro');
   clean(viewSurgeon(state, NOW), 'surgeon');
   clean(viewSetup(state), 'setup');
 });
 
 test('simulated data is labelled on every data screen', () => {
   const state = demoState(NOW);
-  for (const html of [viewToday(state), viewReadings(state, 'hr'), viewMeds(state, NOW), viewSurgeon(state, NOW)]) {
+  for (const html of [viewReadings(state, 'hr'), viewMeds(state, NOW), viewSurgeon(state, NOW)]) {
     assert.match(html, /Simulated data/);
   }
-  assert.doesNotMatch(viewToday(emptyState()), /Simulated data\./);
+  assert.doesNotMatch(viewReadings(emptyState(), 'hr'), /Simulated data\./);
+  // The home screen carries no banner: the "Demo data" label in the page header covers every screen.
+  const page = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(page, /id="demo-chip"[^>]*hidden>Demo data</);
 });
 
-test('today shows the flagged readings with an action', () => {
+test('today shows one gauge per reading, flagged readings first', () => {
   const html = viewToday(demoState(NOW));
-  assert.match(html, /Worth a look/);
-  assert.match(html, /What to do:/);
-  assert.match(html, /Needs attention/);
-  assert.match(html, /not a doctor or a therapist/);
+  const rows = [...html.matchAll(/<a class="gauge gauge-(\w+)" href="#readings\/(\w+)"/g)].map((m) => [m[1], m[2]]);
+  assert.equal(rows.length, INDICATORS.length);
+  assert.deepEqual(rows[0], ['attention', 'urine_vol']);
+  const statuses = rows.map((r) => r[0]);
+  assert.deepEqual(statuses, [...statuses].sort((a, b) => ['attention', 'watch', 'ok'].indexOf(a) - ['attention', 'watch', 'ok'].indexOf(b)));
+  assert.match(html, /1 needs attention/);
+  assert.match(html, /9 in range/);
+  // every reading is drawn against its safe range, and the status is there for screen readers
+  assert.equal((html.match(/class="gauge-band"/g) || []).length, INDICATORS.length);
+  assert.match(html, /<span class="sr-only">Needs attention<\/span>/);
+  assert.match(html, /Green is the safe range/);
+  // far less text than the old home screen
+  assert.ok(html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length < 110, 'home screen has grown wordy again');
 });
 
 test('medication screen describes the trend without claiming cause', () => {
@@ -66,20 +78,7 @@ test('medication screen describes the trend without claiming cause', () => {
   assert.match(html, /Dose due/);
   assert.match(html, /lower/);
   assert.match(html, /does not prove the medication caused it/);
-  assert.match(html, /Astro does not choose medications or doses/);
-});
-
-test('check-in results render for each level', () => {
-  const state = demoState(NOW);
-  for (const ratings of [{ mood: 8, stress: 2, loneliness: 2 }, { mood: 4, stress: 7, loneliness: 6 }, { mood: 2, stress: 9, loneliness: 9 }]) {
-    const score = scoreCheckin(ratings);
-    const html = viewCheckin(state, { result: { score, reply: astroReply(score), activities: pickActivities(score) } });
-    clean(html, `checkin ${score.level}`);
-  }
-  const score = scoreCheckin({ mood: 2, stress: 9, loneliness: 9 });
-  const handoff = viewCheckin(state, { result: { score, reply: astroReply(score), activities: pickActivities(score) } });
-  assert.match(handoff, /needs a person/);
-  assert.doesNotMatch(handoff, /Box breathing/);
+  assert.match(html, /Aeronyx does not choose medications or doses/);
 });
 
 test('flight surgeon screen shows transit, delivery and the Mars warning', () => {

@@ -1,4 +1,4 @@
-// Astro health companion: tests for the real NASA data features.
+// Aeronyx: tests for the real NASA data features.
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -180,9 +180,9 @@ test('glucose and potassium show the Inspiration4 crew range, other readings do 
   assert.match(viewReadings(state, 'potassium'), /3\.5 to 5\.3 mmol\/L/);
   assert.doesNotMatch(viewReadings(state, 'hr'), /Inspiration4/);
   assert.match(viewReadings(state, 'dose'), /Real data\./);
-  assert.match(viewToday(state), /with one exception/);
+  assert.match(viewReadings(state, 'hr'), /with one exception/);
   const old = demoState(NOW);
   old.readings.forEach((r) => { r.source = 'simulated'; });
   assert.doesNotMatch(viewReadings(old, 'dose'), /Real data\./);
-  assert.doesNotMatch(viewToday(old), /with one exception/);
+  assert.doesNotMatch(viewReadings(old, 'hr'), /with one exception/);
 });

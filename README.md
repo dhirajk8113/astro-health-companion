@@ -1,37 +1,41 @@
-# Astro: a health companion for astronauts
+# Aeronyx: health monitoring for astronauts
 
-Astro helps an astronaut on a long mission keep track of their own health. It gathers readings, shows each one against a reference range and the crew member's own preflight baseline, tracks prescribed medication, offers support on hard days, and keeps the flight surgeon informed.
+Aeronyx helps an astronaut on a long mission keep track of their own health. It gathers readings, shows each one against the safe range and the crew member's own preflight baseline, tracks prescribed medication, and keeps the flight surgeon informed. **Astro** is its chat companion: a calm, scripted voice to talk to about stress, with a short mental health check-in.
+
+The project was first called Astro. The repository and the web address keep that name.
 
 Built for the 2026 NASA Space Apps Challenge: **Create Health Monitoring Software for Astronauts on Space Missions**.
 
-**Live demo:** https://dhirajk8113.github.io/astro-health-companion/ (press **Load simulated demo data** on the first screen)
+**Live demo:** https://dhirajk8113.github.io/astro-health-companion/ (a first visit opens with the simulated demo data loaded)
 
-> Astro is a companion, not a doctor or a therapist. It does not diagnose or treat. All readings in the demo are simulated.
+> Aeronyx is a health monitor and Astro is its chat companion. Neither is a doctor or a therapist, and neither diagnoses or treats. The demo readings are simulated, except the radiation dose.
 
 ## What it does
 
 | Screen | What the crew member can do |
 | --- | --- |
-| Today | See every indicator at a glance, colour-coded and labelled, with the readings that need a look listed first and a plain instruction for each. |
+| Today | See every reading as a marker on a bar against its safe range, with the readings that need attention first. Tap one for what to do. |
 | Readings | Log a reading, see it against the reference range and their own baseline, follow the trend on a chart, and read how to take the measurement and why it matters in space. |
 | Medications | See what the flight surgeon prescribed from the onboard kit, record each dose (the dispenser is simulated), follow adherence, and see how the linked reading has moved since the medication started. |
-| Check-in | Rate mood, stress and loneliness, get a short activity to try, and be handed off to people when the ratings or the words call for it. |
+| Astro | Talk to the chat companion about stress, sleep or missing home, do a three-question check-in by tapping numbers, get a calming activity, and be handed off to people when the ratings or the words call for it. |
+| Space | See NASA space weather events, radiation dose measured on the ISS, the station's live cabin readings and today's distance to Mars. |
 | Flight surgeon | Send a structured report to the ground and receive replies and prescriptions, with the signal delay for the chosen mission (ISS, Moon or Mars). |
 | Setup | Enter preflight baselines, choose the mission, and load or clear the simulated demo data. |
 
-Astro follows 13 indicators: resting heart rate, blood pressure, body temperature, body mass (from the mass measurement device), aerobic capacity, fasting glucose, vitamin D, blood potassium, urine volume, urinary calcium, mission radiation dose, sleep and mood.
+Aeronyx follows 13 indicators: resting heart rate, blood pressure, body temperature, body mass (from the mass measurement device), aerobic capacity, fasting glucose, vitamin D, blood potassium, urine volume, urinary calcium, mission radiation dose, sleep and mood.
 
 ## Boundaries
 
-- Astro shows readings and tells the crew member when to involve a person. The flight surgeon makes the medical decisions.
-- Astro never chooses a medication or a dose.
-- Everything Astro says comes from a fixed rule in the code. There is no AI model inside the product, so it keeps working with no link to Earth.
-- What a crew member types into a check-in is used once for a safety check and then dropped. Only the three ratings are stored and reported.
+- Aeronyx shows readings and tells the crew member when to involve a person. The flight surgeon makes the medical decisions.
+- Aeronyx never chooses a medication or a dose.
+- Everything Aeronyx shows, and every reply Astro gives, is fixed wording chosen by a rule in the code. There is no AI model inside the product, so it keeps working with no link to Earth.
+- Astro is not a person or a therapist and says so. Words that signal a crisis always hand off to the crew medical officer and flag the flight surgeon.
+- What a crew member types to Astro stays in the browser on the device. Only the three check-in ratings are reported to the flight surgeon.
 - Everything is stored in the browser on the device. Nothing is uploaded.
 
 ## NASA data and resources used
 
-Astro is organised around NASA's Human Research Program framework, and its limits are NASA's wherever NASA publishes a number. Each indicator is tied to one of the five hazards of human spaceflight, each limit is labelled with its source on screen, and the About screen lists all 13.
+Aeronyx is organised around NASA's Human Research Program framework, and its limits are NASA's wherever NASA publishes a number. Each indicator is tied to one of the five hazards of human spaceflight, each limit is labelled with its source on screen, and the About screen lists all 13.
 
 | Limit | NASA number | NASA document |
 | --- | --- | --- |
@@ -42,7 +46,7 @@ Astro is organised around NASA's Human Research Program framework, and its limit
 | Urinary calcium | Normal under 300 mg a day for men, under 250 for women | HRP Evidence Report: Risk of Renal Stone Formation |
 | Sleep | Adults need 7 to 9 hours; crews average 6 to 6.5 in flight | OCHMO-TB-041 Sleep Accommodations, Revision B |
 
-For the other seven indicators (resting heart rate, blood pressure, body temperature, body mass, fasting glucose, blood potassium and mood) NASA publishes no numeric in-flight limit, so Astro shows the standard adult clinical range and the crew member's own baseline. The NASA numbers were checked against their source documents on 14 November 2026.
+For the other seven indicators (resting heart rate, blood pressure, body temperature, body mass, fasting glucose, blood potassium and mood) NASA publishes no numeric in-flight limit, so Aeronyx shows the standard adult clinical range and the crew member's own baseline. The NASA numbers were checked against their source documents on 14 November 2026.
 
 - [NASA Human Research Program: 5 Hazards of Human Spaceflight](https://www.nasa.gov/hrp/hazards/)
 - [NASA Human Research Program: Human Health and Performance Risks](https://www.nasa.gov/hrp/risks/)
@@ -58,9 +62,9 @@ For the other seven indicators (resting heart rate, blood pressure, body tempera
 
 ## Real NASA data in the app
 
-Astro reads or carries seven pieces of real data. None of it is simulated.
+Aeronyx reads or carries seven pieces of real data. None of it is simulated.
 
-| Data | Source | How Astro uses it | Live or saved |
+| Data | Source | How Aeronyx uses it | Live or saved |
 | --- | --- | --- | --- |
 | Space weather events | [NASA DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) | Environment screen: solar particle events, flares and storms from the last 30 days, with an alert on Today when instruments detect a particle event within 72 hours | Live, read by the browser |
 | The May 2024 solar storm | NASA DONKI | A replay that shows the alert working on a real storm | Saved in `js/data/nasa-snapshots.js` |
@@ -72,7 +76,7 @@ Astro reads or carries seven pieces of real data. None of it is simulated.
 
 Most items in the medication kit are taken, with their strengths, from [NASA's ISS Medical Kit: Contents and Reference](https://www.nasa.gov/wp-content/uploads/2015/03/medical_kit_checklist_-_full_release.pdf) of 9 April 2015.
 
-Limits of this data: DONKI reports events and carries no dose, so Astro never turns an event into a dose figure. The ISS detector dose is converted to dose equivalent with the quality factor published by the DOSIS 3D team and is a detector reading, not a personal dose. The Inspiration4 samples were taken before and after a three-day flight, never in flight. The 2015 kit list is historical.
+Limits of this data: DONKI reports events and carries no dose, so Aeronyx never turns an event into a dose figure. The ISS detector dose is converted to dose equivalent with the quality factor published by the DOSIS 3D team and is a detector reading, not a personal dose. The Inspiration4 samples were taken before and after a three-day flight, never in flight. The 2015 kit list is historical.
 
 ## Space agency partner and other resources
 
@@ -93,15 +97,19 @@ The three background research reports in `docs/research/` list every source cons
 - **Standard clinical values:** the other seven. NASA publishes no numeric in-flight limit for them, so the ranges are standard adult values used on Earth, labelled as such on screen. A flight surgeon would set the real limits for each crew member.
 - **Not included:** stool analysis, which has no in-flight analyzer today.
 
+## The concept device
+
+On a wide window the app is drawn inside a device: a screen with a sample submitter on the left, a medication dispenser on the right and attachment clips on top. The shape is the team's own sketch; the drawing was made in code with an AI assistant and says so on the device. No hardware exists. The sample submitter lights up when a blood or urine reading is logged and the dispenser drops a dose when one is dispensed, and that is all they do. "Hide device" turns the drawing off.
+
 ## Run it
 
-Astro is a static site with no build step and no dependencies.
+Aeronyx is a static site with no build step and no dependencies.
 
 ```
 python3 -m http.server 8000
 ```
 
-Then open `http://localhost:8000`. On the Today screen press **Load simulated demo data**.
+Then open `http://localhost:8000`. A first visit loads the simulated demo data; Setup can clear it or load it again.
 
 Run the tests with Node 20 or later:
 
@@ -118,6 +126,10 @@ js/app.js             events and storage wiring
 js/views.js           screens
 js/lib/assess.js      status rules, trends, adherence, report
 js/lib/checkin.js     check-in rules and handoff
+js/lib/chat.js        Astro's scripted replies
+js/lib/gauge.js       the gauge bars on the home screen
+js/lib/device.js      the concept device: when it is shown
+js/device.js          the concept device: wiring
 js/lib/chart.js       SVG chart
 js/lib/store.js       browser storage
 js/lib/spaceweather.js NASA DONKI space weather events
@@ -132,7 +144,7 @@ AI-USE.md             log of where and how AI was used
 
 ## Use of AI
 
-The concept is the team's own. The code, tests, on-screen wording and background research were produced with an AI assistant (Claude) and reviewed by the team. The 30-second demo video was produced by the AI assistant, which filmed the real app with a script (`tools/film-demo.py`); the video shows an "AI-generated video" watermark on every frame. No AI-generated images or audio are used, and no AI model runs inside the product. Every source file carries a disclosure comment, and `AI-USE.md` has the full log.
+The concept is the team's own. The code, tests, on-screen wording and background research were produced with an AI assistant (Claude) and reviewed by the team. The 30-second demo video was produced by the AI assistant, which filmed the real app with a script (`tools/film-demo.py`); the video shows an "AI-generated video" watermark on every frame. The concept device and Astro's face are drawn in code by the AI assistant from the team's sketch and choices, and the device says so on screen. Astro's replies were written by the AI assistant and are fixed wording. No AI-generated photos or audio are used, and no AI model runs inside the product. Every source file carries a disclosure comment, and `AI-USE.md` has the full log.
 
 ## License
 

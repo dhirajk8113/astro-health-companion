@@ -1,4 +1,4 @@
-// Astro health companion: check-in logic.
+// Aeronyx: check-in logic for Astro, the chat companion.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //
@@ -10,10 +10,11 @@
 export const LEVEL = Object.freeze({ STEADY: 'steady', SUPPORT: 'support', HANDOFF: 'handoff' });
 
 // Phrases that always trigger a handoff to people, whatever the ratings say.
-const CRISIS = /(suicid|kill myself|end my life|end it all|hurt myself|harm myself|self[- ]harm|do(?:n'?t| not) want to (?:live|be here|be alive)|can'?t go on|no reason to live)/i;
+const CRISIS = /(suicid|kill(?:ing)? myself|end(?:ing)? my life|end(?:ing)? it all|hurt(?:ing)? myself|harm(?:ing)? myself|self[- ]harm|want to die|wish i (?:was|were) dead|better off dead|take my (?:own )?life|do(?:n'?t| not) want to (?:live|be here|be alive)|can'?t go on|no reason to live)/i;
 
 export function isCrisisText(text) {
-  return CRISIS.test(String(text || ''));
+  // Phones type a curly apostrophe; treat it as a straight one.
+  return CRISIS.test(String(text || '').replace(/[\u2018\u2019]/g, "'"));
 }
 
 function clamp(n, lo, hi) {
@@ -118,6 +119,12 @@ export function pickActivities(score) {
   return picked.slice(0, 3);
 }
 
+// "a, b and c"
+function listOf(items) {
+  if (items.length < 2) return items.join('');
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
 // What Astro says back. Fixed wording chosen by rule, never generated.
 export function astroReply(score, { sustained = false } = {}) {
   if (score.level === LEVEL.HANDOFF) {
@@ -132,7 +139,7 @@ export function astroReply(score, { sustained = false } = {}) {
   }
   if (score.level === LEVEL.SUPPORT) {
     const lines = [
-      `Thanks for checking in. I noticed ${score.reasons.join(' and ')}.`,
+      `Thanks for checking in. I noticed ${listOf(score.reasons)}.`,
       'Here are a few short things that can help. Pick one, or none.',
     ];
     if (sustained) {
@@ -149,4 +156,4 @@ export function astroReply(score, { sustained = false } = {}) {
   return { title: 'Steady today.', lines };
 }
 
-export const BOUNDARY = 'Astro is a health companion, not a doctor or a therapist. It does not diagnose or treat. It shows your readings, offers support, and tells you when to involve your crew medical officer, flight surgeon or behavioral health team.';
+export const BOUNDARY = 'Aeronyx is a health monitor and Astro is its chat companion. Neither is a doctor or a therapist, and neither diagnoses or treats. They show your readings, offer support, and tell you when to involve your crew medical officer, flight surgeon or behavioral health team.';

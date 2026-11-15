@@ -1,4 +1,4 @@
-// Astro health companion: space weather events from NASA DONKI.
+// Aeronyx: space weather events from NASA DONKI.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 //
