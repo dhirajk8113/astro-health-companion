@@ -14,7 +14,8 @@ Built for the 2026 NASA Space Apps Challenge: **Create Health Monitoring Softwar
 
 | Screen | What the crew member can do |
 | --- | --- |
-| Today | See every reading as a marker on a bar against its safe range, with the readings that need attention first. Tap one for what to do. |
+| Today | See every reading as a marker on a bar against its safe range, with the readings that need attention first and a NASA tag on the ones that use NASA's own limit. Tap one for what to do. A five-step demo tour walks a first-time visitor through the loop. |
+| Sample submitter | Run a blood sample or a 24-hour urine collection. The analysis is simulated: it logs values close to the last readings and says so. |
 | Readings | Log a reading, see it against the reference range and their own baseline, follow the trend on a chart, and read how to take the measurement and why it matters in space. |
 | Medications | See what the flight surgeon prescribed from the onboard kit, record each dose (the dispenser is simulated), follow adherence, and see how the linked reading has moved since the medication started. |
 | Astro | Talk to the chat companion about stress, sleep or missing home, do a three-question check-in by tapping numbers, get a calming activity, and be handed off to people when the ratings or the words call for it. |
@@ -99,7 +100,7 @@ The three background research reports in `docs/research/` list every source cons
 
 ## The concept device
 
-On a wide window the app is drawn inside a device: a screen with a sample submitter on the left, a medication dispenser on the right and attachment clips on top. The shape is the team's own sketch; the drawing was made in code with an AI assistant and says so on the device. No hardware exists. The sample submitter lights up when a blood or urine reading is logged and the dispenser drops a dose when one is dispensed, and that is all they do. "Hide device" turns the drawing off.
+On a wide window the app is drawn inside a device: a screen with a sample submitter on the left, a medication dispenser on the right and attachment clips on top. The shape is the team's own sketch; the drawing was made in code with an AI assistant and says so on the device. No hardware exists. Pressing the sample submitter starts a simulated sample run, and the dispenser drops a dose when one is dispensed. Neither is connected to anything. "Hide device" turns the drawing off.
 
 ## Run it
 
@@ -127,6 +128,7 @@ js/views.js           screens
 js/lib/assess.js      status rules, trends, adherence, report
 js/lib/checkin.js     check-in rules and handoff
 js/lib/chat.js        Astro's scripted replies
+js/lib/sample.js      the simulated sample run
 js/lib/gauge.js       the gauge bars on the home screen
 js/lib/device.js      the concept device: when it is shown
 js/device.js          the concept device: wiring

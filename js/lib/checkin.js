@@ -10,11 +10,27 @@
 export const LEVEL = Object.freeze({ STEADY: 'steady', SUPPORT: 'support', HANDOFF: 'handoff' });
 
 // Phrases that always trigger a handoff to people, whatever the ratings say.
-const CRISIS = /(suicid|kill(?:ing)? myself|end(?:ing)? my life|end(?:ing)? it all|hurt(?:ing)? myself|harm(?:ing)? myself|self[- ]harm|want to die|wish i (?:was|were) dead|better off dead|take my (?:own )?life|do(?:n'?t| not) want to (?:live|be here|be alive)|can'?t go on|no reason to live)/i;
+// Words that mean the crew member may be in danger. Any of them hands the
+// conversation to people. The list errs on the side of handing off.
+const CRISIS = new RegExp([
+  'suicid',
+  'kill(?:ing|ed)? myself', 'end(?:ing)? my(?:self| life)', 'end(?:ing)? (?:it all|things|everything)', 'off myself',
+  'hurt(?:ing)? myself', 'harm(?:ing)? myself', 'self[- ]harm', 'cut(?:ting)? myself',
+  'want(?:ed)? to die', 'wanna die', 'wish i (?:was|were) dead', 'better off dead', 'better off without me',
+  'take my (?:own )?life', "do(?:n'?t| not) want to (?:live|be here|be alive|exist|wake up)",
+  "can'?t go on", 'no reason to live', 'not worth living', 'no point (?:in )?living',
+  '(?:nobody|no one) would (?:even )?(?:miss me|(?:notice|care) if i (?:was gone|were gone|died|disappeared))', 'want to disappear', 'disappear forever',
+  'overdos', 'too many pills',
+  '(?:jump|step|walk|throw myself) out (?:of )?the airlock',
+].join('|'), 'i');
+
+// Words that mean someone else may be in danger. These hand off as well.
+const HARM_TO_OTHERS = /\b(?:hurt|harm|kill|attack|stab|strangle|punch|hit)(?:ing)? (?:him|her|them|someone|somebody|everyone|(?:my|the|a) (?:crewmates?|crew|commander|colleagues?|pilot|engineer|doctor|partner))\b/i;
 
 export function isCrisisText(text) {
   // Phones type a curly apostrophe; treat it as a straight one.
-  return CRISIS.test(String(text || '').replace(/[\u2018\u2019]/g, "'"));
+  const said = String(text || '').replace(/[‘’]/g, "'");
+  return CRISIS.test(said) || HARM_TO_OTHERS.test(said);
 }
 
 function clamp(n, lo, hi) {

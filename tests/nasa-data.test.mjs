@@ -170,7 +170,9 @@ test('environment screen renders in every state', () => {
   assert.match(html, /23\.3 °C/);
   assert.match(html, /Within limit/);
   assert.match(html, /Not updating/);
-  assert.doesNotMatch(viewToday(state, env), /Space weather/);
+  // quiet sun: the home screen says so in one small label, with no alert
+  assert.match(viewToday(state, env), /Space weather quiet · NASA live/);
+  assert.doesNotMatch(viewToday(state, env), /banner-warn/);
   assert.doesNotMatch(html, /NaN|undefined/);
 });
 
