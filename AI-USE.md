@@ -25,7 +25,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 - A radiation warning bar on the Space screen that shows the level and warns when the dose reaches a hazardous limit, and a Space screen made of graphics instead of text.
 - A badge scan and a PIN, so that health information stays private.
 - Showing the onboard kit as a plain list, removing the line about who chooses medications, and removing the per-screen demo notes.
-- The direction for the video: a device that looks more like hardware, a specimen going into the sample port, the dispensed dose, the radiation alarm, a smaller AI mark, and the cuts needed to fit 30 seconds. The team chooses the device finish from three the assistant rendered.
+- The direction for the video: a device that looks more like hardware, a specimen going into the sample port, the dispensed dose, the radiation alarm, a smaller AI mark, and the cuts needed to fit 30 seconds. The team chose the graphite finish from three the assistant rendered.
 
 **What the AI assistant did**
 
