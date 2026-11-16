@@ -30,13 +30,12 @@ MODE = sys.argv[1] if len(sys.argv) > 1 else 'probe'
 PROBE = set(int(x) for x in sys.argv[2].split(',')) if MODE == 'probe' and len(sys.argv) > 2 else set()
 
 FINISH = os.environ.get('FILM_FINISH', 'graphite')  # the device finish the team picked: graphite, aluminium or white
-PIN = '2026'  # a test PIN for the local copy being filmed
 ALARM_DOSE = 612.0  # a test dosimeter reading past NASA's 600 mSv career limit, entered to show the alarm
 DEVICE_JS = (pathlib.Path(__file__).resolve().parent / 'film-device.js').read_text()
 
 SUBS = [
     'A message to Mars can take 20 minutes each way.',
-    "A PIN opens the tablet. Every reading sits against its safe range; NASA's limits are tagged.",
+    "Every reading sits against its safe range; NASA's limits are tagged.",
     'A blood or urine specimen goes into the sample port, and the results are logged.',
     'It dispenses each prescribed dose and tracks how the reading moves afterwards.',
     "If the mission dose reaches NASA's 600 mSv limit, the bar turns red and says what to do.",
@@ -304,15 +303,8 @@ def main():
             ev('s => document.querySelector(s).click()', sel)
             time.sleep(0.12)
 
-        def key(d):
-            return f'[data-action="lock-key"][data-digit="{d}"]'
-
-        # ---- set up, off camera: create the test PIN, choose the Mars mission, then lock again ----
-        page.wait_for_selector('.lock')
-        page.wait_for_selector('.pin-pad')
-        for d in PIN:
-            press(key(d))
-        page.wait_for_selector('html[data-locked="off"]', timeout=10000)
+        # ---- set up, off camera: choose the Mars mission ----
+        page.wait_for_selector('a.gauge')
         go('#setup')
         ev("""() => { const f = document.querySelector('form[data-form="profile"]');
                       f.querySelector('select[name="mission"]').value = 'mars'; f.requestSubmit(); }""")
@@ -325,8 +317,6 @@ def main():
         HB = rect('header.top')['y'] + rect('header.top')['h']
         page.clock.pause_at(datetime.datetime.now() + datetime.timedelta(seconds=2))
         page.clock.run_for(7000)  # let the toasts go
-        press('[data-lock-now]')
-        page.wait_for_selector('.lock')
         film = Film(page)
 
         def sub_o(i, n):
@@ -341,37 +331,16 @@ def main():
                         'card': {'kind': 'title', 'o': o, 'p': seg(i, 3, n - 14)} if o > 0 else None})
         film.close()
 
-        # ---- scene 2: a PIN opens the tablet, then the home screen ----
+        # ---- scene 2: the home screen ----
         n = SCENE_FRAMES[1]
         row = lambda name: f'a.gauge[href="#readings/{name}"]'
-        keys = [center(key(d)) for d in PIN]  # the PIN pad is on screen from the first frame
-        pos = (VW * 0.63, VH * 0.66)
-        press_at = [22, 28, 34, 40]
-        pressed = 0
         film.open(2)
         for i in range(n):
-            st = {'scrollY': 0, 'sub': SUBS[1], 'subO': sub_o(i, n)}
-            if pressed < 4:
-                target = keys[pressed]
-                at = press_at[pressed]
-                since = press_at[pressed - 1] + 1 if pressed else 4
-                t = seg(i, since, at - 1)
-                st['cur'] = {'x': lerp(pos[0], target[0], t), 'y': lerp(pos[1], target[1], t), 'down': seg(i, at - 1, at + 2)}
-                if i == at:
-                    press(key(PIN[pressed]))
-                    pos = target
-                    pressed += 1
-                    if pressed == 4:
-                        page.wait_for_selector('html[data-locked="off"]', timeout=10000)
-                        time.sleep(0.2)
-                        ev('() => window.scrollTo(0, 0)')
-            else:
-                st['cur'] = {'x': pos[0], 'y': pos[1], 'o': 1 - seg(i, 41, 45)}
-                st['fade'] = 0
-                if 48 <= i < 82:
-                    st['ring'] = {'sel': row('urine_vol'), 'o': min(seg(i, 48, 56), 1 - seg(i, 76, 82)), 'pad': 5}
-                elif i >= 82:
-                    st['ring'] = {'sel': row('dose'), 'o': min(seg(i, 82, 90), 1 - seg(i, n - 8, n - 2)), 'pad': 5}
+            st = {'scrollY': 0, 'sub': SUBS[1], 'subO': sub_o(i, n), 'fade': 0}
+            if 14 <= i < 62:
+                st['ring'] = {'sel': row('urine_vol'), 'o': min(seg(i, 14, 22), 1 - seg(i, 56, 62)), 'pad': 5}
+            elif i >= 62:
+                st['ring'] = {'sel': row('dose'), 'o': min(seg(i, 62, 70), 1 - seg(i, n - 8, n - 2)), 'pad': 5}
             film.frame(st)
         film.close()
 

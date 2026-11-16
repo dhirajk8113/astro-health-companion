@@ -13,27 +13,27 @@ import { PANELS, simulateSample } from './lib/sample.js';
 import { initDevice } from './device.js';
 import { initSkin } from './skin.js';
 import { loadVoicePref, saveVoicePref, speakingMs, typingStep } from './lib/persona.js';
-import { loadLock, setPin, checkPin, afterWrongPin, PIN_LENGTH, IDLE_MS, LOCK_KEY } from './lib/lock.js';
 import { hasSpeech, hasRecordings, recordingMs, speak, hush } from './voice.js';
-import { loadState, saveState, clearState, isFirstVisit, newId, merge, hasPlainState, dropPlainState } from './lib/store.js';
-import { VAULT_KEY, deriveKey, seal, open, loadVault, saveVault } from './lib/vault.js';
-import { viewToday, viewReadings, viewMeds, viewAstro, viewSample, viewSurgeon, viewSetup, viewAbout, viewEnvironment, viewLock } from './views.js';
+import { loadState, saveState, clearState, isFirstVisit, newId, hasPlainState } from './lib/store.js';
+import { viewToday, viewReadings, viewMeds, viewAstro, viewSample, viewSurgeon, viewSetup, viewAbout, viewEnvironment } from './views.js';
 import { fetchDonki } from './lib/spaceweather.js';
 import { connectIss } from './lib/isslive.js';
 
-// The record is stored encrypted once a PIN is set (lib/vault.js). Until the
-// PIN is entered there is nothing to show: `state` is an empty placeholder and
-// nothing is written.
-let vault = loadVault(window.localStorage);
-let vaultKey = null; // the key made from the PIN; held in memory only, never stored
-let plainMode = false; // true only where this browser cannot keep a PIN
+// The record is kept in this browser's storage, unencrypted, and is not sent
+// anywhere. The app opens straight on the home screen: there is no lock.
 let state = loadState();
-// A browser with nothing saved opens with the simulated demo data. It is held
-// in memory and first written, encrypted, when the PIN is created.
+// A browser with nothing saved opens with the simulated demo data.
 const firstVisit = isFirstVisit();
-if (!vault && (firstVisit || !hasPlainState())) {
+if (firstVisit || !hasPlainState()) {
   state = demoState(new Date().toISOString());
 }
+// An earlier version locked the tablet with a PIN and stored the record
+// encrypted under it. That record cannot be opened without the PIN, so what
+// that version left in this browser is removed.
+try {
+  window.localStorage.removeItem('aeronyx.lock.v1');
+  window.localStorage.removeItem('aeronyx.vault.v1');
+} catch (err) { /* nothing stored */ }
 // flow: the check-in question Astro is waiting on, while one is being asked in the chat.
 // sample: a run of the sample submitter, while it is analysing or showing results.
 // voice: whether Astro says its lines aloud.
@@ -43,11 +43,6 @@ const ui = {
   voice: loadVoicePref(window.localStorage), fresh: null, greeted: false,
 };
 
-// The tablet opens locked, on its PIN pad. savedLock is null until a PIN is created.
-let savedLock = loadLock(window.localStorage);
-// lock.stage: 'create' until a PIN exists, then 'pin'.
-const lock = { on: true, stage: savedLock ? 'pin' : 'create', entry: '', error: '', tries: 0, waitUntil: 0, busy: false, confirmReset: false };
-let idleTimer = 0;
 
 // Real NASA data that lives outside the saved state: space weather from DONKI
 // and the live ISS cabin feed. Neither is stored on the device.
@@ -108,35 +103,10 @@ function toast(message) {
   toast.timer = window.setTimeout(() => toastEl.classList.remove('show'), 2600);
 }
 
-let sealing = Promise.resolve();
-
-// Saves the record. With a PIN set it is written encrypted, one write after another.
-// Before the PIN has been entered nothing is written: there is no key, and
-// `state` may be the empty placeholder.
+// Saves the record in this browser's storage.
 function persist() {
-  if (vaultKey) {
-    const key = vaultKey;
-    const text = JSON.stringify(state);
-    sealing = sealing
-      .then(() => seal(key, text))
-      .then((sealed) => { saveVault(window.localStorage, sealed); vault = sealed; })
-      .catch(() => toast('This browser is not saving data, so it will be lost when the page closes.'));
-    return sealing;
-  }
-  if (plainMode && !saveState(state)) toast('This browser is not saving data, so it will be lost when the page closes.');
+  if (!saveState(state)) toast('This browser is not saving data, so it will be lost when the page closes.');
   return Promise.resolve();
-}
-
-// After the right PIN: make the key, then open the stored record, or encrypt
-// the one in memory if it has never been encrypted (a first PIN, or a record
-// saved before this lock existed).
-async function openVault(pin) {
-  if (vaultKey) return;
-  const key = await deriveKey(pin, savedLock.salt);
-  if (vault) state = merge(JSON.parse(await open(key, vault)));
-  vaultKey = key;
-  if (!vault) await persist();
-  if (vault) dropPlainState();
 }
 
 // Keep what someone is typing when a screen redraws itself.
@@ -168,12 +138,6 @@ function restoreFields({ kept, focus, open }) {
 
 function render({ keepFields = false } = {}) {
   stopAct();
-  document.documentElement.dataset.locked = lock.on ? 'on' : 'off';
-  if (lock.on) {
-    const wait = Math.max(0, Math.ceil((lock.waitUntil - Date.now()) / 1000));
-    main.innerHTML = viewLock(state, { ...lock, waitSeconds: wait });
-    return;
-  }
   const r = route();
   syncEnvironment(r.name);
   const saved = keepFields ? captureFields() : null;
@@ -275,90 +239,6 @@ function repeatLine() {
   const el = main.querySelector('[data-astro-line]');
   ui.fresh = el ? el.dataset.id : null;
   if (ui.fresh === 'opening') ui.greeted = false;
-}
-
-// ---------- The lock ----------
-
-function armIdle() {
-  window.clearTimeout(idleTimer);
-  if (!lock.on) idleTimer = window.setTimeout(lockNow, IDLE_MS);
-}
-
-function lockNow() {
-  if (lock.on) return;
-  hush();
-  stopBreathing();
-  ui.flow = null;
-  Object.assign(lock, { on: true, stage: savedLock ? 'pin' : 'create', entry: '', error: '', busy: false, confirmReset: false });
-  render();
-  window.scrollTo(0, 0);
-}
-
-function unlock() {
-  Object.assign(lock, { on: false, entry: '', error: '', tries: 0, busy: false, confirmReset: false });
-  armIdle();
-  render();
-}
-
-function waitOut() {
-  const timer = window.setInterval(() => {
-    if (!lock.on || Date.now() >= lock.waitUntil) {
-      window.clearInterval(timer);
-      lock.error = '';
-    }
-    if (lock.on) render();
-  }, 1000);
-}
-
-async function submitPin() {
-  const pin = lock.entry;
-  const creating = lock.stage === 'create';
-  lock.busy = true;
-  render();
-  try {
-    if (creating) {
-      savedLock = await setPin(window.localStorage, pin);
-      await openVault(pin);
-      toast('PIN set.');
-      unlock();
-      return;
-    }
-    if (await checkPin(savedLock, pin)) {
-      try {
-        await openVault(pin);
-      } catch (err) {
-        Object.assign(lock, { busy: false, entry: '', error: 'The stored record could not be opened.' });
-        render();
-        return;
-      }
-      unlock();
-      return;
-    }
-    const next = afterWrongPin(lock.tries, Date.now());
-    Object.assign(lock, { busy: false, entry: '', error: 'Wrong PIN', tries: next.tries, waitUntil: next.waitUntil });
-    render();
-    if (next.waitUntil) waitOut();
-  } catch (err) {
-    if (creating) {
-      // This browser cannot keep a PIN (no storage, or no way to hash it): open without one, unencrypted.
-      plainMode = true;
-      toast('This browser cannot store a PIN, so the tablet is open.');
-      unlock();
-    } else {
-      Object.assign(lock, { busy: false, entry: '', error: 'The PIN could not be checked. Try again.' });
-      render();
-    }
-  }
-}
-
-function pressDigit(d) {
-  if (!lock.on || lock.busy || Date.now() < lock.waitUntil || !/^\d$/.test(String(d))) return;
-  if (lock.stage !== 'pin' && lock.stage !== 'create') return;
-  lock.entry = (lock.entry + d).slice(0, PIN_LENGTH);
-  lock.error = '';
-  lock.confirmReset = false;
-  render();
-  if (lock.entry.length === PIN_LENGTH) submitPin();
 }
 
 function stopBreathing() {
@@ -600,27 +480,6 @@ const actions = {
     if (ui.voice) repeatLine(); else hush();
     render();
   },
-  'lock-key': (el) => pressDigit(el.dataset.digit),
-  'lock-back': () => {
-    lock.entry = lock.entry.slice(0, -1);
-    lock.error = '';
-    render();
-  },
-  // A forgotten PIN cannot be recovered: the only way back in erases the tablet.
-  'lock-reset': () => {
-    if (!lock.confirmReset) {
-      lock.confirmReset = true;
-      render();
-      return;
-    }
-    clearState();
-    try {
-      window.localStorage.removeItem(LOCK_KEY);
-      window.localStorage.removeItem(VAULT_KEY);
-      window.localStorage.removeItem('aeronyx.seen.v1');
-    } catch (err) { /* nothing stored */ }
-    window.location.reload();
-  },
   'start-breathing': () => startBreathing(),
   'activity-done': (el) => {
     const last = state.checkins[state.checkins.length - 1];
@@ -747,16 +606,6 @@ main.addEventListener('input', (event) => {
   }
 });
 
-// The lock button in the header, digits typed on a keyboard, and the idle timer.
-document.addEventListener('click', (event) => {
-  if (event.target.closest('[data-lock-now]')) lockNow();
-});
-document.addEventListener('keydown', (event) => {
-  if (!lock.on) return;
-  if (/^\d$/.test(event.key)) pressDigit(event.key);
-  else if (event.key === 'Backspace' && !lock.busy) { lock.entry = lock.entry.slice(0, -1); lock.error = ''; render(); }
-});
-['pointerdown', 'keydown', 'input'].forEach((type) => document.addEventListener(type, armIdle, { passive: true }));
 
 window.addEventListener('hashchange', () => {
   stopBreathing();

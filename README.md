@@ -32,7 +32,6 @@ These are screenshots of the running app. The device around the screen is a conc
 | Space | See the mission radiation dose on a bar against NASA's 600 mSv career limit, with a warning when the limit is reached or a solar particle event is under way; NASA space weather as counts and scales; dose rates by mission; the station's live cabin readings as gauges; and today's signal delay to Mars. |
 | Flight surgeon | Send a structured report to the ground and receive replies and prescriptions, with the signal delay for the chosen mission (ISS, Moon or Mars). |
 | Setup | Enter preflight baselines, choose the mission, and load or clear the simulated demo data. |
-| Lock | Enter a four-digit PIN. The PIN is kept only as a salted hash, five wrong tries pause the keypad, and the tablet locks after five idle minutes. Once a PIN is set the health record is stored only in encrypted form (AES-GCM, key stretched from the PIN with PBKDF2) and is opened only after the PIN is entered. A four-digit PIN is short; a flight unit would add a key held on the badge. |
 
 AeroNYX follows 13 indicators: resting heart rate, blood pressure, body temperature, body mass (from the mass measurement device), aerobic capacity, fasting glucose, vitamin D, blood potassium, urine volume, urinary calcium, mission radiation dose, sleep and mood.
 
@@ -164,8 +163,6 @@ js/lib/chat.js        Astro's scripted replies
 js/lib/sample.js      the simulated sample run
 js/lib/icons.js       line icons, drawn in code
 js/lib/persona.js     Astro's character, and the device voice used only if there are no recordings
-js/lib/lock.js        the PIN lock
-js/lib/vault.js       the health record, stored encrypted under a key made from the PIN
 js/voice.js           plays Astro's recorded lines
 js/skin.js            the concept device drawn like hardware, and its moving parts
 js/lib/gauge.js       the gauge bars on the home screen
