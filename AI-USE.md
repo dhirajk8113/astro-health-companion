@@ -23,7 +23,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 - The judgement that the screens were still too wordy, and the choice of look A (gauges with icons and fewer words) from three more looks the assistant drew.
 - Astro as a character that actually speaks to the crew, in one of three forms the team named: a character, a sprite or a speech bubble.
 - A radiation warning bar on the Space screen that shows the level and warns when the dose reaches a hazardous limit, and a Space screen made of graphics instead of text.
-- A badge scan and a PIN, so that health information stays private.
+- A badge scan and a PIN, so that health information stays private. The team's aim that the health information stay secure is why the stored record is encrypted.
 - Showing the onboard kit as a plain list, removing the line about who chooses medications, and removing the per-screen demo notes.
 - The direction for the video: a device that looks more like hardware, a specimen going into the sample port, the dispensed dose, the radiation alarm, a smaller AI mark, and the cuts needed to fit 30 seconds. The team chose the graphite finish from three the assistant rendered.
 
@@ -72,6 +72,7 @@ Times are US Central.
 | Nov 15, 15:35 to 16:00 | At the team's direction: look A on the home screen (an icon per reading, counts as symbols); the Space screen redrawn as graphics with a radiation bar against NASA's 600 mSv career limit that turns red at the limit; Astro as a speaking character with three looks, written-out replies and the tablet's own voice; a badge scan and PIN lock; the onboard kit as a plain list; per-screen demo notes removed | `js/views.js`, `js/app.js`, `js/voice.js`, `js/lib/icons.js`, `js/lib/persona.js`, `js/lib/lock.js`, `css/styles.css`, `index.html`, `tests/` | Disclosure comment in each file; "Drawn with AI" under Astro's character and sprite; "Concept device, drawn with AI" on the device; the "Demo data" label in the header; the About screen |
 | Nov 15, 16:00 to 16:15 | At the team's direction, a more detailed drawing of the concept device for the video in three finishes (graphite, aluminium, white), with a specimen tube that goes into the sample port and a capsule that drops into the cup; new scenes for the badge and PIN, the radiation alarm and Astro speaking; the README pictures retaken | `tools/film-device.js`, `tools/film-demo.py`, `media/` | "AI-generated video · concept device" in the corner of every frame; the end card; this file |
 | Nov 15, 20:25 to 20:35 | After the team asked what else would improve the project: the device on the live site redrawn in the graphite finish the team chose for the video, with the specimen tube going into the port on a sample run and the capsule dropping on a dispensed dose; an updated first draft of the detailed description field, written from the facts of the app, for the team to rewrite | `js/skin.js`, `css/styles.css`, `js/app.js`, `tests/`, the project page | "Concept device, drawn with AI" on the device; the AI field on the project page; this file |
+| Nov 15, 20:35 to 20:40 | Encryption of the stored health record: once a PIN is set the record is written only as AES-GCM ciphertext under a key stretched from the PIN, and is opened after the PIN is entered; an older unencrypted record is encrypted on the next unlock | `js/lib/vault.js`, `js/lib/store.js`, `js/app.js`, `js/views.js`, `tests/` | Disclosure comment in each file; the About screen says what the encryption does and does not protect against |
 
 ## How AI output is marked in the project
 
@@ -81,7 +82,7 @@ Times are US Central.
 - The concept device carries the line "Concept device, drawn with AI". The About screen says that no hardware exists.
 - Astro's character and sprite carry the line "Drawn with AI". The bubble look has no drawing.
 - Astro's voice is the browser's built-in speech, limited to voices that run on the device. It is not an AI model and sends nothing anywhere.
-- The badge scan is simulated; the About screen says so, and says that the lock does not encrypt the stored record.
+- The badge scan is simulated; the About screen says so. It also says what the encryption of the stored record does and does not protect against.
 - The Astro screen says that Astro is a scripted companion, not a person or a therapist.
 - The demo video shows "AI-generated video · concept device" in the bottom-left corner of every frame. The team asked for the mark to be removed; it was made smaller and moved instead, because the challenge rules require it. The end card says that no hardware exists, that the readings are simulated except the radiation dose, and that the code and video were made with AI assistance.
 - The device is drawn in detail in the video (`tools/film-device.js`) and, on a wide window, on the live site (`js/skin.js`). It is the concept from the team's sketch and is a drawing: the specimen tube, the analyser readout and the capsule are animation, not hardware. The line "Concept device, drawn with AI" stays on its lower edge.

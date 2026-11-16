@@ -7,7 +7,8 @@ import { defaultInventory } from '../data/medications.js';
 
 const KEY = 'astro.health.v1';
 
-function merge(saved) {
+// Fills in anything a saved record lacks, so an older record still opens.
+export function merge(saved) {
   const base = emptyState();
   if (!saved || typeof saved !== 'object') return base;
   const state = { ...base, ...saved };
@@ -27,6 +28,23 @@ export function loadState() {
   } catch (err) {
     // Private browsing or a blocked store: carry on in memory.
     return emptyState();
+  }
+}
+
+// True when a record is saved here unencrypted: before a PIN was set, or where a PIN cannot be kept.
+export function hasPlainState() {
+  try {
+    return window.localStorage.getItem(KEY) !== null;
+  } catch (err) {
+    return false;
+  }
+}
+
+export function dropPlainState() {
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch (err) {
+    // Nothing to remove.
   }
 }
 

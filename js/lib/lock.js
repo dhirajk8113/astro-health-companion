@@ -2,8 +2,8 @@
 //
 // What this does and does not do: it keeps the screens closed until the right
 // PIN is entered, and it locks again after a few idle minutes. The PIN itself
-// is stored only as a salted, stretched hash. The health record on the tablet
-// is not encrypted by this lock.
+// is stored only as a salted, stretched hash. The health record itself is
+// encrypted under a key made from the same PIN: see vault.js.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 

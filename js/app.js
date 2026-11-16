@@ -15,17 +15,24 @@ import { initSkin } from './skin.js';
 import { loadLook, saveLook, loadVoicePref, saveVoicePref, speakingMs, typingStep } from './lib/persona.js';
 import { loadLock, setPin, checkPin, afterWrongPin, PIN_LENGTH, IDLE_MS, LOCK_KEY } from './lib/lock.js';
 import { hasSpeech, speak, hush } from './voice.js';
-import { loadState, saveState, clearState, isFirstVisit, newId } from './lib/store.js';
+import { loadState, saveState, clearState, isFirstVisit, newId, merge, hasPlainState, dropPlainState } from './lib/store.js';
+import { VAULT_KEY, deriveKey, seal, open, loadVault, saveVault } from './lib/vault.js';
 import { viewToday, viewReadings, viewMeds, viewAstro, viewSample, viewSurgeon, viewSetup, viewAbout, viewEnvironment, viewLock } from './views.js';
 import { fetchDonki } from './lib/spaceweather.js';
 import { connectIss } from './lib/isslive.js';
 
+// The record is stored encrypted once a PIN is set (lib/vault.js). Until the
+// PIN is entered there is nothing to show: `state` is an empty placeholder and
+// nothing is written.
+let vault = loadVault(window.localStorage);
+let vaultKey = null; // the key made from the PIN; held in memory only, never stored
+let plainMode = false; // true only where this browser cannot keep a PIN
 let state = loadState();
-// A first visit opens with the simulated demo data, labelled as such, so no screen is empty.
-// "Clear everything" under Setup starts a blank record.
-if (isFirstVisit()) {
+// A browser with nothing saved opens with the simulated demo data. It is held
+// in memory and first written, encrypted, when the PIN is created.
+const firstVisit = isFirstVisit();
+if (!vault && (firstVisit || !hasPlainState())) {
   state = demoState(new Date().toISOString());
-  saveState(state);
 }
 // flow: the check-in question Astro is waiting on, while one is being asked in the chat.
 // sample: a run of the sample submitter, while it is analysing or showing results.
@@ -100,8 +107,35 @@ function toast(message) {
   toast.timer = window.setTimeout(() => toastEl.classList.remove('show'), 2600);
 }
 
+let sealing = Promise.resolve();
+
+// Saves the record. With a PIN set it is written encrypted, one write after another.
+// Before the PIN has been entered nothing is written: there is no key, and
+// `state` may be the empty placeholder.
 function persist() {
-  if (!saveState(state)) toast('This browser is not saving data, so it will be lost when the page closes.');
+  if (vaultKey) {
+    const key = vaultKey;
+    const text = JSON.stringify(state);
+    sealing = sealing
+      .then(() => seal(key, text))
+      .then((sealed) => { saveVault(window.localStorage, sealed); vault = sealed; })
+      .catch(() => toast('This browser is not saving data, so it will be lost when the page closes.'));
+    return sealing;
+  }
+  if (plainMode && !saveState(state)) toast('This browser is not saving data, so it will be lost when the page closes.');
+  return Promise.resolve();
+}
+
+// After the right PIN: make the key, then open the stored record, or encrypt
+// the one in memory if it has never been encrypted (a first PIN, or a record
+// saved before this lock existed).
+async function openVault(pin) {
+  if (vaultKey) return;
+  const key = await deriveKey(pin, savedLock.salt);
+  if (vault) state = merge(JSON.parse(await open(key, vault)));
+  vaultKey = key;
+  if (!vault) await persist();
+  if (vault) dropPlainState();
 }
 
 // Keep what someone is typing when a screen redraws itself.
@@ -281,11 +315,19 @@ async function submitPin() {
   try {
     if (creating) {
       savedLock = await setPin(window.localStorage, pin);
+      await openVault(pin);
       toast('PIN set.');
       unlock();
       return;
     }
     if (await checkPin(savedLock, pin)) {
+      try {
+        await openVault(pin);
+      } catch (err) {
+        Object.assign(lock, { busy: false, entry: '', error: 'The stored record could not be opened.' });
+        render();
+        return;
+      }
       unlock();
       return;
     }
@@ -295,7 +337,8 @@ async function submitPin() {
     if (next.waitUntil) waitOut();
   } catch (err) {
     if (creating) {
-      // This browser cannot keep a PIN (no storage, or no way to hash it): open without one.
+      // This browser cannot keep a PIN (no storage, or no way to hash it): open without one, unencrypted.
+      plainMode = true;
       toast('This browser cannot store a PIN, so the tablet is open.');
       unlock();
     } else {
@@ -462,6 +505,7 @@ const actions = {
     ui.confirmClear = false;
     ui.flow = null;
     state = clearState();
+    persist();
     toast('Everything on this device was cleared.');
     render();
   },
@@ -586,6 +630,7 @@ const actions = {
     clearState();
     try {
       window.localStorage.removeItem(LOCK_KEY);
+      window.localStorage.removeItem(VAULT_KEY);
       window.localStorage.removeItem('aeronyx.seen.v1');
     } catch (err) { /* nothing stored */ }
     window.location.reload();
