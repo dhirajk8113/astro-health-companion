@@ -947,3 +947,5 @@ button.icon-link { border: 0; background: transparent; cursor: pointer; font: in
 @media print {
   .sk { display: none !important; }
 }
+
+.ai-mark-inline { display: inline; margin-left: auto; font-weight: 400; letter-spacing: 0.04em; text-transform: none; }
