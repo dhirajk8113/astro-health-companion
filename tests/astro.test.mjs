@@ -18,6 +18,7 @@ import { isCrisisText } from '../js/lib/checkin.js';
 import { PANELS, simulateSample } from '../js/lib/sample.js';
 import { hasIcon, icon } from '../js/lib/icons.js';
 import { skinMarkup, skinParts, skinPose } from '../js/skin.js';
+import { VAULT_KEY, deriveKey, seal, open, loadVault, saveVault } from '../js/lib/vault.js';
 import { LOOKS, DEFAULT_LOOK, loadLook, saveLook, loadVoicePref, saveVoicePref, pickVoice, personaSvg, speakingMs, typingStep } from '../js/lib/persona.js';
 import { validPin, setPin, checkPin, loadLock, afterWrongPin, MAX_TRIES, WAIT_MS, LOCK_KEY } from '../js/lib/lock.js';
 
@@ -471,4 +472,35 @@ test('the detailed device is drawn around wherever the screen sits, and its tube
   // a short sample unit drops the grip ridges; a tall one has them
   assert.ok(skinMarkup(at(1280, 720)).still.length > skinMarkup(at(1024, 640)).still.length);
   assert.deepEqual(skinPose(skinParts(at(1280, 720)), {}), { vial: null, pill: null });
+});
+
+// ---------- the stored record, encrypted ----------
+
+test('the stored record is ciphertext, opens with the right PIN and with no other', async () => {
+  const state = demoState(NOW);
+  state.chat.push({ id: 'm1', from: 'me', t: NOW, text: 'a private thought about home' });
+  const text = JSON.stringify(state);
+  const key = await deriveKey('4821', 'a1b2c3');
+  const storage = memory();
+  assert.equal(loadVault(storage), null);
+  const sealed = await seal(key, text);
+  saveVault(storage, sealed);
+  const raw = storage.getItem(VAULT_KEY);
+  // nothing readable is stored: no reading names, no typed words, no PIN
+  for (const leak of ['readings', 'Potassium', 'a private thought', 'urine_vol', '4821']) assert.ok(!raw.includes(leak), leak);
+  assert.deepEqual(loadVault(storage), sealed);
+  assert.equal(await open(key, loadVault(storage)), text);
+  assert.deepEqual(JSON.parse(await open(await deriveKey('4821', 'a1b2c3'), sealed)).chat, state.chat);
+  // a wrong PIN, another tablet's salt, or changed bytes: the record does not open
+  await assert.rejects(async () => open(await deriveKey('4822', 'a1b2c3'), sealed));
+  await assert.rejects(async () => open(await deriveKey('4821', 'ffffff'), sealed));
+  const flipped = { ...sealed, data: (sealed.data[0] === 'A' ? 'B' : 'A') + sealed.data.slice(1) };
+  await assert.rejects(open(key, flipped));
+  // the same record sealed twice does not give the same bytes
+  const again = await seal(key, text);
+  assert.notEqual(again.iv, sealed.iv);
+  assert.notEqual(again.data, sealed.data);
+  // a damaged entry reads as no vault, not as a crash
+  storage.setItem(VAULT_KEY, '{not json');
+  assert.equal(loadVault(storage), null);
 });
