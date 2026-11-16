@@ -1,7 +1,56 @@
 // Astro's recorded lines: each line Astro can say, and the audio file that says it.
-// Filled in by tools/build-voice.py. Empty means no recordings: Astro then uses the tablet's own voice.
+// Written by tools/build-voice.py. Empty means no recordings: Astro then uses the tablet's own voice.
 //
-// AI disclosure: the recordings are AI-generated speech (ElevenLabs). See AI-USE.md.
+// AI disclosure: the recordings are AI-generated speech (ElevenLabs, voice "Rowan"). See AI-USE.md.
 
-export const VOICE_NAME = '';
-export const VOICE_LINES = {};
+export const VOICE_NAME = "Rowan";
+export const VOICE_LINES = {
+  "Hi, I'm Astro. I'm here to listen. How are you doing right now?": { file: "line-01.mp3", seconds: 4.36 },
+  "Thank you for telling me. This needs a person, not me. Please talk to your crew medical officer now. I am flagging your flight surgeon and behavioral health team. The flag does not include what you wrote.": { file: "line-02.mp3", seconds: 11.81 },
+  "How is your mood today? 1 is very low, 10 is very good.": { file: "line-03.mp3", seconds: 5.15 },
+  "How stressed do you feel? 0 is not at all, 10 is extremely.": { file: "line-04.mp3", seconds: 5.56 },
+  "How lonely or cut off do you feel? 0 is not at all, 10 is extremely.": { file: "line-05.mp3", seconds: 6.53 },
+  "I'm Astro, a scripted companion on this tablet. I'm not a person or a therapist, but I can listen and help you reach one.": { file: "line-06.mp3", seconds: 7.81 },
+  "I can listen, run a three-question check-in, and offer a breathing or grounding exercise. If it is urgent, your crew medical officer is the person to reach.": { file: "line-07.mp3", seconds: 9.56 },
+  "That sounds physical, and I can't assess symptoms. Log it under Readings and tell your crew medical officer.": { file: "line-08.mp3", seconds: 6.61 },
+  "I'm listening. Tell me more.": { file: "line-09.mp3", seconds: 2.04 },
+  "What part of that is weighing on you most?": { file: "line-10.mp3", seconds: 2.77 },
+  "How long has it felt like this?": { file: "line-11.mp3", seconds: 2.12 },
+  "A quick check-in would help me understand how you are doing.": { file: "line-12.mp3", seconds: 3.24 },
+  "That sounds like a lot to carry. Let's slow it down together with two minutes of breathing.": { file: "line-13.mp3", seconds: 5.25 },
+  "One thing at a time. What is the next small step, and what can wait?": { file: "line-14.mp3", seconds: 4.99 },
+  "Thank you for telling me. Let's steady your breathing first, then name the worry.": { file: "line-15.mp3", seconds: 5.25 },
+  "A worry is easier to carry once it has a name. What is it about most?": { file: "line-16.mp3", seconds: 4.91 },
+  "Short sleep makes everything feel heavier. Dim the lights and try slow breathing before your next sleep period.": { file: "line-17.mp3", seconds: 7.31 },
+  "If sleep stays short for three nights, tell your flight surgeon. A breathing exercise is here if you want one now.": { file: "line-18.mp3", seconds: 6.84 },
+  "Missing people shows how much they matter. Would writing a short note home help right now?": { file: "line-19.mp3", seconds: 5.88 },
+  "You are far away, and you are not forgotten. Could you share a meal with a crewmate today?": { file: "line-20.mp3", seconds: 5.88 },
+  "I'm sorry today feels heavy. You don't have to fix it right now. What is one small thing that usually helps?": { file: "line-21.mp3", seconds: 7.0 },
+  "Thank you for saying it. If this feeling stays for days, raise it at your next private conference with the behavioral health team.": { file: "line-22.mp3", seconds: 7.16 },
+  "Friction is normal in a small crew. Take ten slow breaths before you answer anyone.": { file: "line-23.mp3", seconds: 5.8 },
+  "It makes sense that it got to you. What happened, in one sentence?": { file: "line-24.mp3", seconds: 4.36 },
+  "Long missions get repetitive. Plan one small thing to look forward to in the next three days.": { file: "line-25.mp3", seconds: 5.96 },
+  "Any time. I'm here whenever you want to talk.": { file: "line-26.mp3", seconds: 2.85 },
+  "Hello. How are you doing right now?": { file: "line-27.mp3", seconds: 2.27 },
+  "Glad to hear it. A quick check-in would put it on record, if you want one.": { file: "line-28.mp3", seconds: 4.36 },
+  "Good. I'm here if that changes.": { file: "line-29.mp3", seconds: 2.27 },
+  "Pick a number from 1 to 10. You can tap one below.": { file: "line-30.mp3", seconds: 3.55 },
+  "Pick a number from 0 to 10. You can tap one below.": { file: "line-31.mp3", seconds: 3.71 },
+  "This needs a person, not an app. Thank you for telling me. I am a companion, not a clinician, and this is beyond what I should handle. Please talk to your crew medical officer now. I am sending a flag to your flight surgeon and behavioral health team now. It carries your ratings, not what you wrote.": { file: "line-32.mp3", seconds: 17.79 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a low mood rating. Here are a few short things that can help. Pick one, or none.": { file: "line-33.mp3", seconds: 9.33 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a low mood rating. Here are a few short things that can help. Pick one, or none. Your mood has been below your usual level for several check-ins in a row. That is worth raising at your next private conference with the behavioral health team.": { file: "line-34.mp3", seconds: 17.87 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a low mood rating and a raised loneliness rating. Here are a few short things that can help. Pick one, or none.": { file: "line-35.mp3", seconds: 11.23 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a low mood rating and a raised loneliness rating. Here are a few short things that can help. Pick one, or none. Your mood has been below your usual level for several check-ins in a row. That is worth raising at your next private conference with the behavioral health team.": { file: "line-36.mp3", seconds: 20.04 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a low mood rating and a raised stress rating. Here are a few short things that can help. Pick one, or none.": { file: "line-37.mp3", seconds: 11.23 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a low mood rating and a raised stress rating. Here are a few short things that can help. Pick one, or none. Your mood has been below your usual level for several check-ins in a row. That is worth raising at your next private conference with the behavioral health team.": { file: "line-38.mp3", seconds: 20.04 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a low mood rating, a raised stress rating and a raised loneliness rating. Here are a few short things that can help. Pick one, or none.": { file: "line-39.mp3", seconds: 13.17 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a low mood rating, a raised stress rating and a raised loneliness rating. Here are a few short things that can help. Pick one, or none. Your mood has been below your usual level for several check-ins in a row. That is worth raising at your next private conference with the behavioral health team.": { file: "line-40.mp3", seconds: 21.89 },
+  "Steady today. Thanks for checking in. Your ratings are close to your usual level. An activity is here if you want one.": { file: "line-41.mp3", seconds: 6.69 },
+  "Steady today. Thanks for checking in. Your ratings are close to your usual level. Your mood has still been below your usual level for several check-ins in a row. That is worth raising at your next private conference.": { file: "line-42.mp3", seconds: 12.67 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a raised loneliness rating. Here are a few short things that can help. Pick one, or none.": { file: "line-43.mp3", seconds: 9.64 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a raised loneliness rating. Here are a few short things that can help. Pick one, or none. Your mood has been below your usual level for several check-ins in a row. That is worth raising at your next private conference with the behavioral health team.": { file: "line-44.mp3", seconds: 18.52 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a raised stress rating. Here are a few short things that can help. Pick one, or none.": { file: "line-45.mp3", seconds: 9.56 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a raised stress rating. Here are a few short things that can help. Pick one, or none. Your mood has been below your usual level for several check-ins in a row. That is worth raising at your next private conference with the behavioral health team.": { file: "line-46.mp3", seconds: 18.21 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a raised stress rating and a raised loneliness rating. Here are a few short things that can help. Pick one, or none.": { file: "line-47.mp3", seconds: 11.39 },
+  "Sounds like a heavier day. Thanks for checking in. I noticed a raised stress rating and a raised loneliness rating. Here are a few short things that can help. Pick one, or none. Your mood has been below your usual level for several check-ins in a row. That is worth raising at your next private conference with the behavioral health team.": { file: "line-48.mp3", seconds: 20.27 },
+};
