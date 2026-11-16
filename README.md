@@ -8,7 +8,7 @@ Built for the 2026 NASA Space Apps Challenge: **Create Health Monitoring Softwar
 
 **Live demo:** https://dhirajk8113.github.io/astro-health-companion/ (a first visit opens with the simulated demo data loaded)
 
-**Demo video, 30 seconds:** https://dhirajk8113.github.io/astro-health-companion/media/aeronyx-demo.mp4
+**Demo video, 30 seconds:** https://dhirajk8113.github.io/astro-health-companion/media/aeronyx-demo-v2.mp4
 
 ![The AeroNYX home screen inside the concept device: one gauge per reading against its safe range](media/home.jpg)
 
