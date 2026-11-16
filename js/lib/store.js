@@ -31,7 +31,7 @@ export function loadState() {
   }
 }
 
-// True when a record is saved here unencrypted: before a PIN was set, or where a PIN cannot be kept.
+// True when a record is saved in this browser.
 export function hasPlainState() {
   try {
     return window.localStorage.getItem(KEY) !== null;

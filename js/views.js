@@ -19,7 +19,6 @@ import { PANELS } from './lib/sample.js';
 import { lineChart } from './lib/chart.js';
 import { icon } from './lib/icons.js';
 import { personaSvg } from './lib/persona.js';
-import { PIN_LENGTH } from './lib/lock.js';
 
 export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -408,28 +407,6 @@ export function viewAstro(state, ui = {}) {
     ${notes ? `<section class="card"><h2>Notes home</h2><ul class="notes">${notes}</ul></section>` : ''}`;
 }
 
-// ---------- The lock: a PIN ----------
-
-// lock.stage: 'create' (first use) or 'pin'.
-export function viewLock(state, lock = {}) {
-  const name = state && state.profile && state.profile.name ? state.profile.name : 'Crew member';
-  const creating = lock.stage === 'create';
-  const entry = String(lock.entry || '');
-  const waiting = lock.waitSeconds > 0;
-  const off = waiting || lock.busy ? ' disabled' : '';
-  const dots = Array.from({ length: PIN_LENGTH }, (_, k) => `<span class="pin-dot${k < entry.length ? ' on' : ''}"></span>`).join('');
-  const key = (d) => `<button type="button" class="pin-key" data-action="lock-key" data-digit="${d}"${off}>${d}</button>`;
-  const keys = `${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(key).join('')}<span></span>${key('0')}<button type="button" class="pin-key pin-back" data-action="lock-back" aria-label="Delete the last digit"${off}>${icon('back', 22)}</button>`;
-  const message = waiting ? `Too many tries. Wait ${lock.waitSeconds} s.` : (lock.error || '');
-  return `<section class="lock">
-      <p class="lock-who">${icon('lock', 20)}<strong>${esc(name)}</strong></p>
-      <h1>${creating ? 'Create a PIN' : 'Enter PIN'}</h1>
-      <div class="pin-dots${lock.error ? ' is-wrong' : ''}" role="img" aria-label="${entry.length} of ${PIN_LENGTH} digits entered">${dots}</div>
-      <p class="lock-msg" role="alert">${esc(message)}</p>
-      <div class="pin-pad">${keys}</div>
-      ${creating ? '' : `<button type="button" class="link" data-action="lock-reset">${lock.confirmReset ? 'Press again to erase this tablet' : 'Forgot PIN'}</button>`}
-    </section>`;
-}
 
 // ---------- The sample submitter ----------
 
@@ -640,7 +617,7 @@ export function viewAbout() {
         <li>The medication dispenser is simulated. Most kit items come from NASA's 2015 ISS medical kit list; the unit counts are demo values and the list is not a medical reference.</li>
         <li>The device drawn around the screen is a concept from the team's own sketch, drawn in code with an AI assistant. No hardware exists. The medication dispenser only reacts on screen, and a run of the sample submitter generates simulated values close to the last reading and logs them as simulated.</li>
         <li>Astro is a scripted companion. Each reply is fixed wording chosen by the words typed. It is not a person, a therapist or an AI model, and what is typed stays on the tablet. Its character is drawn with AI and marked as such. Its voice is AI-generated speech from ElevenLabs, recorded in advance in a voice the team chose and marked as AI on the Astro screen. The recordings are stored with the app and play from the tablet, so nothing Astro says is sent anywhere.</li>
-        <li>The tablet opens with a PIN, and the PIN is real. It is kept only as a salted, stretched hash, five wrong tries pause the keypad, and the tablet locks again after five idle minutes. Once a PIN is set, the health record is stored on the tablet only in encrypted form (AES-GCM, under a key stretched from the PIN with PBKDF2) and is opened only after the PIN is entered. While the app stays open the record is held in memory. A four-digit PIN is short, so someone holding the tablet could try all 10,000; a flight unit would need a longer code or a second factor.</li>
+        <li>The health record is kept in this browser's storage on the tablet. It is not encrypted and it is not sent anywhere. The demo has no lock; a flight unit would need one, and would need to encrypt the record.</li>
         <li>The flight surgeon console stands in for Mission Control, so one person can show both ends of the loop. The medication dispenser logs a dose and lowers the kit count; no hardware moves.</li>
         <li>Limits are NASA's wherever NASA publishes a number, and each one is labelled with its source. The others are standard adult clinical values used on Earth.</li>
         <li>Blood and urine panels assume an onboard analyzer that returns results from a small sample. Stool analysis has no in-flight analyzer today and is not included.</li>

@@ -13,17 +13,15 @@ import { LEVEL, ACTIVITIES } from '../js/lib/checkin.js';
 import { chatReply, parseRating, CHECKIN_STEPS, OPENING, HANDOFF_TEXT } from '../js/lib/chat.js';
 import { gaugeFor, gaugePosition } from '../js/lib/gauge.js';
 import { deviceFits, loadDevicePref, saveDevicePref, usesSampleSubmitter } from '../js/lib/device.js';
-import { viewAstro, viewToday, viewReadings, viewMeds, viewSample, viewEnvironment, viewLock } from '../js/views.js';
+import { viewAstro, viewToday, viewReadings, viewMeds, viewSample, viewEnvironment } from '../js/views.js';
 import { isCrisisText } from '../js/lib/checkin.js';
 import { PANELS, simulateSample } from '../js/lib/sample.js';
 import { hasIcon, icon } from '../js/lib/icons.js';
 import { skinMarkup, skinParts, skinPose } from '../js/skin.js';
-import { VAULT_KEY, deriveKey, seal, open, loadVault, saveVault } from '../js/lib/vault.js';
 import { existsSync } from 'node:fs';
 import { allAstroLines } from '../tools/voice-lines.mjs';
 import { VOICE_LINES, VOICE_NAME } from '../js/data/voice-lines.js';
 import { loadVoicePref, saveVoicePref, pickVoice, personaSvg, speakingMs, typingStep } from '../js/lib/persona.js';
-import { validPin, setPin, checkPin, loadLock, afterWrongPin, MAX_TRIES, WAIT_MS, LOCK_KEY } from '../js/lib/lock.js';
 
 const NOW = '2026-11-14T18:00:00.000Z';
 
@@ -214,7 +212,6 @@ test('the page names the device AeroNYX, the companion Astro, and labels the dev
   assert.match(page, /data-nav="astro" href="#astro"/);
   assert.equal((page.match(/<a data-nav="\w+" href="#\w+"/g) || []).length, 6);
   assert.match(page, /<span>Concept device, drawn with AI<\/span>/);
-  assert.match(page, /data-lock-now/);
   assert.match(page, /Neither is a doctor or a therapist/);
   const css = readFileSync(new URL('../css/styles.css', import.meta.url), 'utf8');
   assert.match(css, /@media \(min-width: 1000px\) and \(min-height: 600px\)/);
@@ -383,53 +380,20 @@ test('the voice is on until switched off, and only a voice that runs on the tabl
   assert.ok(typingStep(40) === 1 && typingStep(400) > 1);
 });
 
-// ---------- the lock ----------
+// ---------- no lock ----------
 
-test('a PIN is four digits, is stored only as a salted hash, and the right one opens the lock', async () => {
-  for (const good of ['0000', '4821']) assert.equal(validPin(good), true);
-  for (const bad of ['', '123', '12345', '12a4', ' 1234']) assert.equal(validPin(bad), false, bad);
-  const storage = memory();
-  assert.equal(loadLock(storage), null);
-  const lock = await setPin(storage, '4821');
-  const raw = storage.getItem(LOCK_KEY);
-  assert.ok(!raw.includes('4821'), 'the PIN itself is stored');
-  assert.deepEqual(loadLock(storage), lock);
-  assert.equal(await checkPin(lock, '4821'), true);
-  assert.equal(await checkPin(lock, '4822'), false);
-  assert.equal(await checkPin(null, '4821'), false);
-  // the same PIN set twice does not give the same hash
-  assert.notEqual((await setPin(memory(), '4821')).hash, lock.hash);
-  await assert.rejects(setPin(memory(), '12'));
-});
-
-test('wrong PINs are counted, and the keypad rests after too many', () => {
-  let s = { tries: 0, waitUntil: 0 };
-  for (let k = 1; k < MAX_TRIES; k += 1) {
-    s = afterWrongPin(s.tries, 1000);
-    assert.equal(s.waitUntil, 0);
-  }
-  s = afterWrongPin(s.tries, 1000);
-  assert.equal(s.waitUntil, 1000 + WAIT_MS);
-  assert.equal(s.tries, 0);
-});
-
-test('the lock screen asks for a PIN, with no badge step, and never shows the digits', () => {
-  const state = demoState(NOW);
-  let html = viewLock(state, {});
-  assert.match(html, /pin-pad/);
-  assert.doesNotMatch(html, /badge|lock-scan/i);
-  html = viewLock(state, { stage: 'create', entry: '12' });
-  assert.match(html, /Create a PIN/);
-  assert.equal((html.match(/class="pin-dot on"/g) || []).length, 2);
-  assert.equal((html.match(/data-action="lock-key"/g) || []).length, 10);
-  assert.doesNotMatch(html, /Forgot PIN/);
-  html = viewLock(state, { stage: 'pin', entry: '', error: 'Wrong PIN' });
-  assert.match(html, /Enter PIN/);
-  assert.match(html, /Wrong PIN/);
-  assert.match(html, /Forgot PIN/);
-  assert.match(viewLock(state, { stage: 'pin', waitSeconds: 12 }), /Wait 12 s/);
-  assert.match(viewLock(state, { stage: 'pin', confirmReset: true }), /Press again to erase this tablet/);
-  assert.ok(icon('lock').startsWith('<svg') && icon('badge') === '' && icon('nothing') === '');
+test('there is no lock: no lock screen, no PIN code, and the app says the record is not encrypted', async () => {
+  const views = await import('../js/views.js');
+  assert.equal(views.viewLock, undefined);
+  assert.ok(!existsSync(new URL('../js/lib/lock.js', import.meta.url)));
+  assert.ok(!existsSync(new URL('../js/lib/vault.js', import.meta.url)));
+  const app = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(app, /viewLock|lock-key|pressDigit|deriveKey/);
+  const page = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(page, /data-lock-now|Lock the tablet/);
+  const about = views.viewAbout();
+  assert.match(about, /not encrypted/);
+  assert.doesNotMatch(about, /\bPIN\b/);
 });
 
 // ---------- the device drawn like hardware ----------
@@ -464,37 +428,6 @@ test('the detailed device is drawn around wherever the screen sits, and its tube
   // a short sample unit drops the grip ridges; a tall one has them
   assert.ok(skinMarkup(at(1280, 720)).still.length > skinMarkup(at(1024, 640)).still.length);
   assert.deepEqual(skinPose(skinParts(at(1280, 720)), {}), { vial: null, pill: null });
-});
-
-// ---------- the stored record, encrypted ----------
-
-test('the stored record is ciphertext, opens with the right PIN and with no other', async () => {
-  const state = demoState(NOW);
-  state.chat.push({ id: 'm1', from: 'me', t: NOW, text: 'a private thought about home' });
-  const text = JSON.stringify(state);
-  const key = await deriveKey('4821', 'a1b2c3');
-  const storage = memory();
-  assert.equal(loadVault(storage), null);
-  const sealed = await seal(key, text);
-  saveVault(storage, sealed);
-  const raw = storage.getItem(VAULT_KEY);
-  // nothing readable is stored: no reading names, no typed words, no PIN
-  for (const leak of ['readings', 'Potassium', 'a private thought', 'urine_vol', '4821']) assert.ok(!raw.includes(leak), leak);
-  assert.deepEqual(loadVault(storage), sealed);
-  assert.equal(await open(key, loadVault(storage)), text);
-  assert.deepEqual(JSON.parse(await open(await deriveKey('4821', 'a1b2c3'), sealed)).chat, state.chat);
-  // a wrong PIN, another tablet's salt, or changed bytes: the record does not open
-  await assert.rejects(async () => open(await deriveKey('4822', 'a1b2c3'), sealed));
-  await assert.rejects(async () => open(await deriveKey('4821', 'ffffff'), sealed));
-  const flipped = { ...sealed, data: (sealed.data[0] === 'A' ? 'B' : 'A') + sealed.data.slice(1) };
-  await assert.rejects(open(key, flipped));
-  // the same record sealed twice does not give the same bytes
-  const again = await seal(key, text);
-  assert.notEqual(again.iv, sealed.iv);
-  assert.notEqual(again.data, sealed.data);
-  // a damaged entry reads as no vault, not as a crash
-  storage.setItem(VAULT_KEY, '{not json');
-  assert.equal(loadVault(storage), null);
 });
 
 // ---------- Astro's recorded voice ----------
