@@ -28,7 +28,7 @@ These are screenshots of the running app. The device around the screen is a conc
 | Sample submitter | Run a blood sample or a 24-hour urine collection. The analysis is simulated: it logs values close to the last readings and says so. |
 | Readings | Log a reading, see it against the reference range and their own baseline, follow the trend on a chart, and read how to take the measurement and why it matters in space. |
 | Medications | See what the flight surgeon prescribed from the onboard kit, record each dose (the dispenser is simulated), follow adherence, and see how the linked reading has moved since the medication started. |
-| Astro | Talk to a companion that speaks: a character, a sprite or a speech bubble that writes out each reply and reads it aloud in the tablet's own voice. Talk about stress, sleep or missing home, do a three-question check-in by tapping numbers, get a calming activity, and be handed off to people when the ratings or the words call for it. |
+| Astro | Talk to a companion that speaks: a character, a sprite or a speech bubble that writes out each reply and says it aloud in a recorded voice (AI-generated speech, marked on screen). Talk about stress, sleep or missing home, do a three-question check-in by tapping numbers, get a calming activity, and be handed off to people when the ratings or the words call for it. |
 | Space | See the mission radiation dose on a bar against NASA's 600 mSv career limit, with a warning when the limit is reached or a solar particle event is under way; NASA space weather as counts and scales; dose rates by mission; the station's live cabin readings as gauges; and today's signal delay to Mars. |
 | Flight surgeon | Send a structured report to the ground and receive replies and prescriptions, with the signal delay for the chosen mission (ISS, Moon or Mars). |
 | Setup | Enter preflight baselines, choose the mission, and load or clear the simulated demo data. |
@@ -163,10 +163,10 @@ js/lib/checkin.js     check-in rules and handoff
 js/lib/chat.js        Astro's scripted replies
 js/lib/sample.js      the simulated sample run
 js/lib/icons.js       line icons, drawn in code
-js/lib/persona.js     Astro's three looks and its on-device voice
+js/lib/persona.js     Astro's three looks, and the device voice used only if there are no recordings
 js/lib/lock.js        the badge and PIN lock
 js/lib/vault.js       the health record, stored encrypted under a key made from the PIN
-js/voice.js           speaks Astro's lines with the tablet's own voice
+js/voice.js           plays Astro's recorded lines
 js/skin.js            the concept device drawn like hardware, and its moving parts
 js/lib/gauge.js       the gauge bars on the home screen
 js/lib/device.js      the concept device: when it is shown
@@ -176,17 +176,20 @@ js/lib/store.js       browser storage
 js/lib/spaceweather.js NASA DONKI space weather events
 js/lib/isslive.js     client for NASA's public ISS telemetry feed
 js/lib/ephemeris.js   Earth to Mars signal delay from JPL planetary positions
-js/data/              indicators, medication kit, simulated demo data, saved NASA data
+js/data/              indicators, medication kit, simulated demo data, saved NASA data, the list of Astro's recorded lines
 tests/                logic and screen tests
 docs/research/        background research reports
 tools/film-demo.py    script that films the demo video from the running app
 tools/film-device.js  the detailed device drawing used only in the video
+tools/voice-lines.mjs lists every line Astro can say
+tools/build-voice.py  turns the recordings into media/voice/ and the list the app reads
+media/voice/          Astro's 48 recorded lines (AI-generated speech, ElevenLabs)
 AI-USE.md             log of where and how AI was used
 ```
 
 ## Use of AI
 
-The concept is the team's own. The code, tests, on-screen wording and background research were produced with an AI assistant (Claude) and reviewed by the team. The 30-second demo video was produced by the AI assistant, which filmed the real app with a script (`tools/film-demo.py`); the video shows an "AI-generated video" watermark on every frame. The concept device and Astro's face are drawn in code by the AI assistant from the team's sketch and choices, and the device says so on screen. Astro's replies were written by the AI assistant and are fixed wording. No AI-generated photos or audio are used, and no AI model runs inside the product. Every source file carries a disclosure comment, and `AI-USE.md` has the full log.
+The concept is the team's own. The code, tests, on-screen wording and background research were produced with an AI assistant (Claude) and reviewed by the team. The 30-second demo video was produced by the AI assistant, which filmed the real app with a script (`tools/film-demo.py`); the video shows an "AI-generated video" watermark on every frame. The concept device and Astro's face are drawn in code by the AI assistant from the team's sketch and choices, and the device says so on screen. Astro's replies were written by the AI assistant and are fixed wording. Astro's voice is AI-generated speech: 48 recordings made with ElevenLabs in a voice the team chose, stored in `media/voice/` and marked on the Astro screen. No AI-generated photos are used, and no AI model runs inside the product. Every source file carries a disclosure comment, and `AI-USE.md` has the full log.
 
 ## License
 
