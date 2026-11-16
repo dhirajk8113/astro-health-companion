@@ -930,3 +930,20 @@ button.icon-link { border: 0; background: transparent; cursor: pointer; font: in
   .seg button { padding: 0.25rem 0.5rem; }
   .astro-bar { flex-wrap: nowrap; gap: 0.4rem; }
 }
+
+/* ---------- The device, shaded like hardware (js/skin.js draws it over the plain one) ---------- */
+@media (min-width: 1000px) and (min-height: 600px) {
+  .sk { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; }
+  #sk-still { z-index: 40; }
+  #sk-move { z-index: 43; }
+  .sk text { font-family: inherit; }
+  html[data-skin="on"] .dv-case { border-color: transparent; box-shadow: none; }
+  html[data-skin="on"] .dv-screen, html[data-skin="on"] .dv-clips, html[data-skin="on"] .dv-brand, html[data-skin="on"] .dv-led { visibility: hidden; }
+  /* The side units stay where they are, unseen, so they can still be pressed and focused. */
+  html[data-skin="on"] .dv-pod { background: transparent; box-shadow: none; color: transparent; }
+  html[data-skin="on"] .dv-pod > * { visibility: hidden; }
+  html[data-skin="on"] .dv-chin { left: calc(var(--dv-case-x) + 160px); right: calc(var(--dv-case-x) + 160px); }
+}
+@media print {
+  .sk { display: none !important; }
+}

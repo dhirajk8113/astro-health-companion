@@ -37,7 +37,8 @@
 
   function build(finishName) {
     const f = FINISHES[finishName] || FINISHES.graphite;
-    document.querySelectorAll('#f-dev, #f-dev-move, #f-dev-style').forEach((el) => el.remove());
+    document.querySelectorAll('#f-dev, #f-dev-move, #f-dev-style, #sk-still, #sk-move').forEach((el) => el.remove());
+    document.documentElement.dataset.skin = 'film'; // the live site's own detailed device stands down
     const style = document.createElement('style');
     style.id = 'f-dev-style';
     style.textContent = `
