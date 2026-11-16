@@ -21,7 +21,7 @@ This log records where and how AI tools were used, as the 2026 NASA Space Apps P
 - Astro as a calming companion to talk to about stress, with a mental health check-in inside the chat.
 - The judgement that the first screens had too much text, and the choice of the gauge home screen from three looks the assistant drew.
 - The judgement that the screens were still too wordy, and the choice of look A (gauges with icons and fewer words) from three more looks the assistant drew.
-- Astro as a character that actually speaks to the crew, in one of three forms the team named: a character, a sprite or a speech bubble.
+- Astro as a character that actually speaks to the crew, in one of three forms the team named: a character, a sprite or a speech bubble. On Nov 15, after seeing all three in the app, the team kept only the character.
 - The judgement that Astro's built-in voice sounded robotic and had to be comforting and friendly, the decision to record it with ElevenLabs, and the choice of the voice ("Rowan").
 - A radiation warning bar on the Space screen that shows the level and warns when the dose reaches a hazardous limit, and a Space screen made of graphics instead of text.
 - A badge scan and a PIN, so that health information stays private. The team's aim that the health information stay secure is why the stored record is encrypted.
@@ -76,6 +76,7 @@ Times are US Central.
 | Nov 15, 20:35 to 20:40 | Encryption of the stored health record: once a PIN is set the record is written only as AES-GCM ciphertext under a key stretched from the PIN, and is opened after the PIN is entered; an older unencrypted record is encrypted on the next unlock | `js/lib/vault.js`, `js/lib/store.js`, `js/app.js`, `js/views.js`, `tests/` | Disclosure comment in each file; the About screen says what the encryption does and does not protect against |
 | Nov 15, 20:40 to 20:45 | After the team said Astro's built-in voice sounded robotic: the tablet's own voice slowed and set to prefer a device's better voices, and the app made ready to play recorded lines instead (none recorded yet) | `js/voice.js`, `js/lib/persona.js`, `js/data/voice-lines.js`, `tools/voice-lines.mjs`, `tools/build-voice.py`, `tests/` | Disclosure comment in each file; this file |
 | Nov 15, 20:45 to 21:10 | At the team's direction ("record it, go ahead and use elevenlabs") and in the voice the team picked: all 48 lines Astro can say generated as AI speech with ElevenLabs, re-encoded and added to the app, which now plays them instead of the tablet's voice; the About screen, the README and this file updated to say so | `media/voice/`, `js/data/voice-lines.js`, `js/views.js`, `README.md`, `AI-USE.md` | "Drawn and voiced with AI" under Astro's character and sprite; "AI voice" beside the bubble; the About screen; this file |
+| Nov 15, 21:18 to 21:22 | At the team's direction, after it had seen all three looks in the app: the sprite and bubble looks and the switch between them removed, so Astro is always the character; the README picture of the Astro screen retaken | `js/lib/persona.js`, `js/views.js`, `js/app.js`, `tests/`, `README.md`, `media/astro.jpg` | "Drawn and voiced with AI" under Astro's character; this file |
 
 ## How AI output is marked in the project
 
@@ -83,7 +84,7 @@ Times are US Central.
 - The About screen and the page footer state that the code was written with an AI assistant.
 - Simulated data is labelled by a "Demo data" label in the header of every screen, and by "SIMULATED DATA" in the report sent to the flight surgeon. The team asked for the notes that repeated this on each screen to be removed; the About screen keeps the full account of what is real and what is simulated.
 - The concept device carries the line "Concept device, drawn with AI". The About screen says that no hardware exists.
-- Astro's character and sprite carry the line "Drawn and voiced with AI". The bubble look has no drawing and carries "AI voice" beside Astro's name.
+- Astro's character carries the line "Drawn and voiced with AI".
 - Astro's voice is AI-generated speech: 48 recordings made with ElevenLabs (voice "Rowan", chosen by the team), one for each line Astro can say, stored in `media/voice/` and played from the tablet. No speech model runs inside the product and nothing is sent anywhere. ElevenLabs embeds content credentials in the files it makes; the copies here were re-encoded to mono at 64 kbps, which removes that data, so the marks on the Astro screen and this file are the disclosure. With the recordings removed, the app falls back to the browser's built-in speech.
 - The badge scan is simulated; the About screen says so. It also says what the encryption of the stored record does and does not protect against.
 - The Astro screen says that Astro is a scripted companion, not a person or a therapist.
