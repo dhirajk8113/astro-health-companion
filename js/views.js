@@ -408,18 +408,11 @@ export function viewAstro(state, ui = {}) {
     ${notes ? `<section class="card"><h2>Notes home</h2><ul class="notes">${notes}</ul></section>` : ''}`;
 }
 
-// ---------- The lock: a badge scan, then a PIN ----------
+// ---------- The lock: a PIN ----------
 
-// lock.stage: 'badge' (waiting for a scan), 'create' (first use) or 'pin'.
+// lock.stage: 'create' (first use) or 'pin'.
 export function viewLock(state, lock = {}) {
   const name = state && state.profile && state.profile.name ? state.profile.name : 'Crew member';
-  if (lock.stage !== 'pin' && lock.stage !== 'create') {
-    return `<section class="lock">
-        <div class="lock-art${lock.scanning ? ' is-scanning' : ''}" aria-hidden="true">${icon('badge', 84)}<span class="lock-beam"></span></div>
-        <h1>AeroNYX</h1>
-        <button type="button" class="button lock-scan" data-action="lock-scan"${lock.scanning ? ' disabled' : ''}>${icon('badge', 20)}${lock.scanning ? 'Reading badge' : 'Scan badge'}</button>
-      </section>`;
-  }
   const creating = lock.stage === 'create';
   const entry = String(lock.entry || '');
   const waiting = lock.waitSeconds > 0;
@@ -429,7 +422,7 @@ export function viewLock(state, lock = {}) {
   const keys = `${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(key).join('')}<span></span>${key('0')}<button type="button" class="pin-key pin-back" data-action="lock-back" aria-label="Delete the last digit"${off}>${icon('back', 22)}</button>`;
   const message = waiting ? `Too many tries. Wait ${lock.waitSeconds} s.` : (lock.error || '');
   return `<section class="lock">
-      <p class="lock-who">${icon('badge', 20)}<strong>${esc(name)}</strong></p>
+      <p class="lock-who">${icon('lock', 20)}<strong>${esc(name)}</strong></p>
       <h1>${creating ? 'Create a PIN' : 'Enter PIN'}</h1>
       <div class="pin-dots${lock.error ? ' is-wrong' : ''}" role="img" aria-label="${entry.length} of ${PIN_LENGTH} digits entered">${dots}</div>
       <p class="lock-msg" role="alert">${esc(message)}</p>
@@ -647,7 +640,7 @@ export function viewAbout() {
         <li>The medication dispenser is simulated. Most kit items come from NASA's 2015 ISS medical kit list; the unit counts are demo values and the list is not a medical reference.</li>
         <li>The device drawn around the screen is a concept from the team's own sketch, drawn in code with an AI assistant. No hardware exists. The medication dispenser only reacts on screen, and a run of the sample submitter generates simulated values close to the last reading and logs them as simulated.</li>
         <li>Astro is a scripted companion. Each reply is fixed wording chosen by the words typed. It is not a person, a therapist or an AI model, and what is typed stays on the tablet. Its character is drawn with AI and marked as such. Its voice is AI-generated speech from ElevenLabs, recorded in advance in a voice the team chose and marked as AI on the Astro screen. The recordings are stored with the app and play from the tablet, so nothing Astro says is sent anywhere.</li>
-        <li>The badge scan is simulated: no badge reader is connected. The PIN is real. It is kept only as a salted, stretched hash, five wrong tries pause the keypad, and the tablet locks again after five idle minutes. Once a PIN is set, the health record is stored on the tablet only in encrypted form (AES-GCM, under a key stretched from the PIN with PBKDF2) and is opened only after the PIN is entered. While the app stays open the record is held in memory. A four-digit PIN is short, so someone holding the tablet could try all 10,000; a flight unit would add a key held on the badge.</li>
+        <li>The tablet opens with a PIN, and the PIN is real. It is kept only as a salted, stretched hash, five wrong tries pause the keypad, and the tablet locks again after five idle minutes. Once a PIN is set, the health record is stored on the tablet only in encrypted form (AES-GCM, under a key stretched from the PIN with PBKDF2) and is opened only after the PIN is entered. While the app stays open the record is held in memory. A four-digit PIN is short, so someone holding the tablet could try all 10,000; a flight unit would need a longer code or a second factor.</li>
         <li>The flight surgeon console stands in for Mission Control, so one person can show both ends of the loop. The medication dispenser logs a dose and lowers the kit count; no hardware moves.</li>
         <li>Limits are NASA's wherever NASA publishes a number, and each one is labelled with its source. The others are standard adult clinical values used on Earth.</li>
         <li>Blood and urine panels assume an onboard analyzer that returns results from a small sample. Stool analysis has no in-flight analyzer today and is not included.</li>

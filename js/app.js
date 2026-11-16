@@ -43,9 +43,10 @@ const ui = {
   voice: loadVoicePref(window.localStorage), fresh: null, greeted: false,
 };
 
-// The tablet opens locked: a badge scan, then a PIN. savedLock is null until a PIN is created.
-const lock = { on: true, stage: 'badge', entry: '', error: '', tries: 0, waitUntil: 0, scanning: false, busy: false, confirmReset: false };
+// The tablet opens locked, on its PIN pad. savedLock is null until a PIN is created.
 let savedLock = loadLock(window.localStorage);
+// lock.stage: 'create' until a PIN exists, then 'pin'.
+const lock = { on: true, stage: savedLock ? 'pin' : 'create', entry: '', error: '', tries: 0, waitUntil: 0, busy: false, confirmReset: false };
 let idleTimer = 0;
 
 // Real NASA data that lives outside the saved state: space weather from DONKI
@@ -288,7 +289,7 @@ function lockNow() {
   hush();
   stopBreathing();
   ui.flow = null;
-  Object.assign(lock, { on: true, stage: 'badge', entry: '', error: '', scanning: false, busy: false, confirmReset: false });
+  Object.assign(lock, { on: true, stage: savedLock ? 'pin' : 'create', entry: '', error: '', busy: false, confirmReset: false });
   render();
   window.scrollTo(0, 0);
 }
@@ -358,16 +359,6 @@ function pressDigit(d) {
   lock.confirmReset = false;
   render();
   if (lock.entry.length === PIN_LENGTH) submitPin();
-}
-
-function scanBadge() {
-  if (!lock.on || lock.scanning || lock.stage !== 'badge') return;
-  lock.scanning = true;
-  render();
-  window.setTimeout(() => {
-    Object.assign(lock, { scanning: false, stage: savedLock ? 'pin' : 'create', entry: '', error: '' });
-    render();
-  }, 1100);
 }
 
 function stopBreathing() {
@@ -609,7 +600,6 @@ const actions = {
     if (ui.voice) repeatLine(); else hush();
     render();
   },
-  'lock-scan': () => scanBadge(),
   'lock-key': (el) => pressDigit(el.dataset.digit),
   'lock-back': () => {
     lock.entry = lock.entry.slice(0, -1);
@@ -765,7 +755,6 @@ document.addEventListener('keydown', (event) => {
   if (!lock.on) return;
   if (/^\d$/.test(event.key)) pressDigit(event.key);
   else if (event.key === 'Backspace' && !lock.busy) { lock.entry = lock.entry.slice(0, -1); lock.error = ''; render(); }
-  else if (event.key === 'Enter') scanBadge();
 });
 ['pointerdown', 'keydown', 'input'].forEach((type) => document.addEventListener(type, armIdle, { passive: true }));
 

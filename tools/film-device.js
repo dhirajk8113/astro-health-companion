@@ -119,8 +119,6 @@
     <circle cx="1153.5" cy="49.5" r="7" fill="#6fd596" opacity="0.25" filter="url(#fd-blur4)"/><circle cx="1153.5" cy="49.5" r="3.6" fill="#6fd596"/>
     ${screw(1112, 49.5)}${screw(232, 49.5)}
     ${grille}
-    <g opacity="0.85" fill="none" stroke="${f.ink}" stroke-width="1.5" stroke-linecap="round"><rect x="1096" y="686" width="15" height="11" rx="2.2"/><path d="M1117 688.5a4.5 4.5 0 0 1 0 6M1121 686a8 8 0 0 1 0 11"/></g>
-    <text x="1132" y="695.5" font-size="8.5" font-weight="700" letter-spacing="1.8" fill="${f.ink}" opacity="0.8">BADGE</text>
   </g>
   <!-- the display sits a little below the glass: a soft shadow along its edges, and a faint reflection -->
   <g clip-path="url(#fd-inscreen)">

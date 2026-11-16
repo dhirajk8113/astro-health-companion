@@ -55,8 +55,6 @@ export function skinMarkup(geo) {
   const medsPath = `M${n1(mp.x)} ${n1(mp.y + 14)}a14 14 0 0 1 14-14h${n1(mp.w - 54)}a40 40 0 0 1 40 40v${n1(mp.h - 80)}a40 40 0 0 1-40 40h${n1(-(mp.w - 54))}a14 14 0 0 1-14-14z`;
   const seamY = [sp.y + 202, sp.y + 426];
   const top = shell.y + 15.5;
-  const bx = shell.x + shell.w - 88;
-  const by = shell.y + shell.h - 16;
   const { slot, ring, readout, chute, cup } = p;
 
   const still = `
@@ -118,8 +116,6 @@ export function skinMarkup(geo) {
     <circle cx="${n1(shell.x + shell.w - 30.5)}" cy="${n1(top)}" r="7" fill="${GREEN}" opacity="0.25" filter="url(#sk-blur4)"/>
     <circle cx="${n1(shell.x + shell.w - 30.5)}" cy="${n1(top)}" r="3.6" fill="${GREEN}"/>
     ${screw(shell.x + shell.w - 72, top)}${screw(shell.x + 136, top)}
-    <g opacity="0.85" fill="none" stroke="${f.ink}" stroke-width="1.5" stroke-linecap="round"><rect x="${n1(bx)}" y="${n1(by)}" width="15" height="11" rx="2.2"/><path d="M${n1(bx + 21)} ${n1(by + 2.5)}a4.5 4.5 0 0 1 0 6M${n1(bx + 25)} ${n1(by)}a8 8 0 0 1 0 11"/></g>
-    <text x="${n1(bx + 36)}" y="${n1(by + 9.5)}" font-size="8.5" font-weight="700" letter-spacing="1.8" fill="${f.ink}" opacity="0.8">BADGE</text>
   </g>
   <g clip-path="url(#sk-inscreen)">
     <path d="${rr({ x: scr.x - 3, y: scr.y - 3, w: scr.w + 6, h: scr.h + 6 }, 15)}" fill="none" stroke="#000" stroke-opacity="0.75" stroke-width="12" filter="url(#sk-blur4)"/>

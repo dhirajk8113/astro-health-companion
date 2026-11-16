@@ -1,4 +1,4 @@
-// The lock on the tablet: a badge scan, then a four-digit PIN.
+// The lock on the tablet: a four-digit PIN.
 //
 // What this does and does not do: it keeps the screens closed until the right
 // PIN is entered, and it locks again after a few idle minutes. The PIN itself
