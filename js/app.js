@@ -12,7 +12,7 @@ import { usesSampleSubmitter } from './lib/device.js';
 import { PANELS, simulateSample } from './lib/sample.js';
 import { initDevice } from './device.js';
 import { initSkin } from './skin.js';
-import { loadLook, saveLook, loadVoicePref, saveVoicePref, speakingMs, typingStep } from './lib/persona.js';
+import { loadVoicePref, saveVoicePref, speakingMs, typingStep } from './lib/persona.js';
 import { loadLock, setPin, checkPin, afterWrongPin, PIN_LENGTH, IDLE_MS, LOCK_KEY } from './lib/lock.js';
 import { hasSpeech, hasRecordings, recordingMs, speak, hush } from './voice.js';
 import { loadState, saveState, clearState, isFirstVisit, newId, merge, hasPlainState, dropPlainState } from './lib/store.js';
@@ -36,11 +36,11 @@ if (!vault && (firstVisit || !hasPlainState())) {
 }
 // flow: the check-in question Astro is waiting on, while one is being asked in the chat.
 // sample: a run of the sample submitter, while it is analysing or showing results.
-// look, voice: how Astro appears and whether it reads its lines aloud.
+// voice: whether Astro says its lines aloud.
 // fresh: the id of a line Astro has just said and has yet to act out.
 const ui = {
   flow: null, sample: null, confirmClear: false, breathing: null,
-  look: loadLook(window.localStorage), voice: loadVoicePref(window.localStorage), fresh: null, greeted: false,
+  voice: loadVoicePref(window.localStorage), fresh: null, greeted: false,
 };
 
 // The tablet opens locked: a badge scan, then a PIN. savedLock is null until a PIN is created.
@@ -180,7 +180,7 @@ function render({ keepFields = false } = {}) {
   switch (r.name) {
     case 'readings': html = viewReadings(state, r.arg); break;
     case 'meds': html = viewMeds(state, nowISO()); break;
-    case 'astro': html = viewAstro(state, { flow: ui.flow, look: ui.look, voice: ui.voice, canSpeak: hasSpeech(), recorded: hasRecordings() }); break;
+    case 'astro': html = viewAstro(state, { flow: ui.flow, voice: ui.voice, canSpeak: hasSpeech(), recorded: hasRecordings() }); break;
     case 'sample': html = viewSample(state, { sample: ui.sample }); break;
     case 'surgeon': html = viewSurgeon(state, nowISO()); break;
     case 'setup': html = viewSetup(state); break;
@@ -269,7 +269,7 @@ function perform() {
   mine.done = window.setTimeout(() => { spoken = true; settle(); }, voiced ? longest : Math.min(2800, speakingMs(text)));
 }
 
-// Act out whatever Astro is saying now once more, after its look or voice changes.
+// Act out whatever Astro is saying now once more, after its voice is switched back on.
 function repeatLine() {
   const el = main.querySelector('[data-astro-line]');
   ui.fresh = el ? el.dataset.id : null;
@@ -601,12 +601,6 @@ const actions = {
     ui.flow = null;
     hush();
     persist();
-    render();
-  },
-  'astro-look': (el) => {
-    ui.look = el.dataset.look;
-    saveLook(window.localStorage, ui.look);
-    repeatLine();
     render();
   },
   'astro-voice': () => {

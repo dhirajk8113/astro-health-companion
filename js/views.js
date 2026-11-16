@@ -18,7 +18,7 @@ import { gaugeFor, gaugePosition } from './lib/gauge.js';
 import { PANELS } from './lib/sample.js';
 import { lineChart } from './lib/chart.js';
 import { icon } from './lib/icons.js';
-import { LOOKS, LOOK_NAMES, DEFAULT_LOOK, personaSvg } from './lib/persona.js';
+import { personaSvg } from './lib/persona.js';
 import { PIN_LENGTH } from './lib/lock.js';
 
 export function esc(s) {
@@ -332,10 +332,9 @@ function activityBlock(a) {
 
 // Astro speaks from a stage: its character, and what it is saying now in a
 // speech bubble. Everything said before sits under "Earlier in this chat".
-// ui.look: 'character', 'sprite' or 'bubble'. ui.voice: whether Astro reads its lines aloud.
+// ui.voice: whether Astro says its lines aloud.
 export function viewAstro(state, ui = {}) {
   const chat = state.chat || [];
-  const look = LOOKS.includes(ui.look) ? ui.look : DEFAULT_LOOK;
   const thread = [{ id: 'opening', from: 'astro', text: OPENING }, ...chat.slice(-40)];
   const lastIsMe = thread[thread.length - 1].from === 'me';
   let lineAt = thread.length - 1;
@@ -368,23 +367,20 @@ export function viewAstro(state, ui = {}) {
     <tr><td>${esc(fmtWhen(c.t))}</td><td class="num">${c.mood}</td><td class="num">${c.stress}</td><td class="num">${c.loneliness}</td><td>${esc(c.level === LEVEL.HANDOFF ? 'Handed off to people' : c.level === LEVEL.SUPPORT ? 'Support offered' : 'Steady')}</td></tr>`).join('');
   const notes = (state.notesHome || []).slice(-3).reverse().map((n) => `<li><span class="muted small">${esc(fmtWhen(n.t))}</span><br>${esc(n.text)}</li>`).join('');
 
-  const persona = personaSvg(look);
-  const looks = LOOKS.map((l) => `<button type="button" data-action="astro-look" data-look="${l}" aria-pressed="${l === look}">${LOOK_NAMES[l]}</button>`).join('');
+  const persona = personaSvg();
   const voiceOn = ui.voice !== false;
   const voice = ui.canSpeak === false ? '' : `<button type="button" class="voice-btn" data-action="astro-voice" aria-pressed="${voiceOn}" aria-label="Astro's voice is ${voiceOn ? 'on' : 'off'}" title="Astro's voice is ${voiceOn ? 'on' : 'off'}">${icon(voiceOn ? 'sound' : 'mute', 20)}</button>`;
 
   return `
-    <section class="card chat astro-${look}">
+    <section class="card chat astro-character">
       <div class="astro-bar">
         <h1>Astro</h1>
-        <div class="seg" role="group" aria-label="How Astro looks">${looks}</div>
         ${voice}
       </div>
       ${said ? `<p class="said"><span class="sr-only">You said: </span>${esc(said.text)}</p>` : ''}
       <div class="stage" data-astro-stage>
-        ${persona ? `<div class="persona-wrap">${persona}<span class="ai-mark">${ui.recorded ? 'Drawn and voiced with AI' : 'Drawn with AI'}</span></div>` : ''}
+        <div class="persona-wrap">${persona}<span class="ai-mark">${ui.recorded ? 'Drawn and voiced with AI' : 'Drawn with AI'}</span></div>
         <div class="speech${handoffNow ? ' is-handoff' : ''}" aria-live="polite">
-          ${persona ? '' : `<span class="speech-name">Astro<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>${ui.recorded ? '<span class="ai-mark ai-mark-inline">AI voice</span>' : ''}</span>`}
           <p class="speech-text" data-astro-line data-id="${esc(line.id || '')}">${esc(line.text)}</p>
         </div>
       </div>
@@ -650,7 +646,7 @@ export function viewAbout() {
         <li>Real and saved in the app: the May 2024 solar storm (NASA DONKI), ISS dose measurements (NASA RadLab) and the Inspiration4 crew's blood chemistry ranges (NASA OSDR).</li>
         <li>The medication dispenser is simulated. Most kit items come from NASA's 2015 ISS medical kit list; the unit counts are demo values and the list is not a medical reference.</li>
         <li>The device drawn around the screen is a concept from the team's own sketch, drawn in code with an AI assistant. No hardware exists. The medication dispenser only reacts on screen, and a run of the sample submitter generates simulated values close to the last reading and logs them as simulated.</li>
-        <li>Astro is a scripted companion. Each reply is fixed wording chosen by the words typed. It is not a person, a therapist or an AI model, and what is typed stays on the tablet. Its character and sprite are drawn with AI and marked as such. Its voice is AI-generated speech from ElevenLabs, recorded in advance in a voice the team chose and marked as AI on the Astro screen. The recordings are stored with the app and play from the tablet, so nothing Astro says is sent anywhere.</li>
+        <li>Astro is a scripted companion. Each reply is fixed wording chosen by the words typed. It is not a person, a therapist or an AI model, and what is typed stays on the tablet. Its character is drawn with AI and marked as such. Its voice is AI-generated speech from ElevenLabs, recorded in advance in a voice the team chose and marked as AI on the Astro screen. The recordings are stored with the app and play from the tablet, so nothing Astro says is sent anywhere.</li>
         <li>The badge scan is simulated: no badge reader is connected. The PIN is real. It is kept only as a salted, stretched hash, five wrong tries pause the keypad, and the tablet locks again after five idle minutes. Once a PIN is set, the health record is stored on the tablet only in encrypted form (AES-GCM, under a key stretched from the PIN with PBKDF2) and is opened only after the PIN is entered. While the app stays open the record is held in memory. A four-digit PIN is short, so someone holding the tablet could try all 10,000; a flight unit would add a key held on the badge.</li>
         <li>The flight surgeon console stands in for Mission Control, so one person can show both ends of the loop. The medication dispenser logs a dose and lowers the kit count; no hardware moves.</li>
         <li>Limits are NASA's wherever NASA publishes a number, and each one is labelled with its source. The others are standard adult clinical values used on Earth.</li>

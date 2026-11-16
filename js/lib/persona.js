@@ -1,31 +1,13 @@
-// How Astro appears and sounds: a character, a sprite or a plain speech
-// bubble, drawn in code, and the tablet's own voice.
+// How Astro appears and sounds: a character drawn in code, and the device
+// voice used when there are no recordings.
 //
-// The idea that Astro is a character that speaks, and the three forms offered
-// here, are the team's. The drawings are AI-made and carry a visible mark.
+// The idea that Astro is a character that speaks is the team's. Of the three
+// forms first offered (a character, a sprite, a speech bubble) the team kept
+// the character. The drawing is AI-made and carries a visible mark.
 //
 // AI disclosure: written and drawn with an AI coding assistant (Claude). See AI-USE.md.
 
-export const LOOKS = Object.freeze(['character', 'sprite', 'bubble']);
-export const LOOK_NAMES = Object.freeze({ character: 'Character', sprite: 'Sprite', bubble: 'Bubble' });
-export const DEFAULT_LOOK = 'character';
-
-const LOOK_KEY = 'aeronyx.astro.look.v1';
 const VOICE_KEY = 'aeronyx.astro.voice.v1';
-
-export function loadLook(storage) {
-  try {
-    const v = storage.getItem(LOOK_KEY);
-    return LOOKS.includes(v) ? v : DEFAULT_LOOK;
-  } catch (err) {
-    return DEFAULT_LOOK;
-  }
-}
-
-export function saveLook(storage, look) {
-  if (!LOOKS.includes(look)) return;
-  try { storage.setItem(LOOK_KEY, look); } catch (err) { /* private mode: the choice lasts for this visit */ }
-}
 
 // The voice is on until it is switched off.
 export function loadVoicePref(storage) {
@@ -77,23 +59,7 @@ const CHARACTER = `<svg class="persona persona-character" viewBox="0 0 120 120" 
   <ellipse class="p-mouth" cx="60" cy="66" rx="6" ry="3"/>
 </svg>`;
 
-// A glowing point of light with a sound wave in it.
-const SPRITE = `<svg class="persona persona-sprite" viewBox="0 0 120 120" aria-hidden="true">
-  <circle class="s-halo s-halo-2" cx="60" cy="60" r="52"/>
-  <circle class="s-halo s-halo-1" cx="60" cy="60" r="42"/>
-  <circle class="s-core" cx="60" cy="60" r="30"/>
-  <g class="s-wave">
-    <rect x="42" y="56" width="5" height="8" rx="2.5"/>
-    <rect x="50" y="56" width="5" height="8" rx="2.5"/>
-    <rect x="58" y="56" width="5" height="8" rx="2.5"/>
-    <rect x="66" y="56" width="5" height="8" rx="2.5"/>
-    <rect x="74" y="56" width="5" height="8" rx="2.5"/>
-  </g>
-</svg>`;
-
-// The drawing for a look. The bubble look has none: the speech bubble is Astro.
-export function personaSvg(look) {
-  if (look === 'character') return CHARACTER;
-  if (look === 'sprite') return SPRITE;
-  return '';
+// Astro's drawing.
+export function personaSvg() {
+  return CHARACTER;
 }

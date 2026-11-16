@@ -28,7 +28,7 @@ These are screenshots of the running app. The device around the screen is a conc
 | Sample submitter | Run a blood sample or a 24-hour urine collection. The analysis is simulated: it logs values close to the last readings and says so. |
 | Readings | Log a reading, see it against the reference range and their own baseline, follow the trend on a chart, and read how to take the measurement and why it matters in space. |
 | Medications | See what the flight surgeon prescribed from the onboard kit, record each dose (the dispenser is simulated), follow adherence, and see how the linked reading has moved since the medication started. |
-| Astro | Talk to a companion that speaks: a character, a sprite or a speech bubble that writes out each reply and says it aloud in a recorded voice (AI-generated speech, marked on screen). Talk about stress, sleep or missing home, do a three-question check-in by tapping numbers, get a calming activity, and be handed off to people when the ratings or the words call for it. |
+| Astro | Talk to a companion that speaks: a character that writes out each reply in a speech bubble and says it aloud in a recorded voice (AI-generated speech, marked on screen). Talk about stress, sleep or missing home, do a three-question check-in by tapping numbers, get a calming activity, and be handed off to people when the ratings or the words call for it. |
 | Space | See the mission radiation dose on a bar against NASA's 600 mSv career limit, with a warning when the limit is reached or a solar particle event is under way; NASA space weather as counts and scales; dose rates by mission; the station's live cabin readings as gauges; and today's signal delay to Mars. |
 | Flight surgeon | Send a structured report to the ground and receive replies and prescriptions, with the signal delay for the chosen mission (ISS, Moon or Mars). |
 | Setup | Enter preflight baselines, choose the mission, and load or clear the simulated demo data. |
@@ -163,7 +163,7 @@ js/lib/checkin.js     check-in rules and handoff
 js/lib/chat.js        Astro's scripted replies
 js/lib/sample.js      the simulated sample run
 js/lib/icons.js       line icons, drawn in code
-js/lib/persona.js     Astro's three looks, and the device voice used only if there are no recordings
+js/lib/persona.js     Astro's character, and the device voice used only if there are no recordings
 js/lib/lock.js        the badge and PIN lock
 js/lib/vault.js       the health record, stored encrypted under a key made from the PIN
 js/voice.js           plays Astro's recorded lines

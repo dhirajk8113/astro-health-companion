@@ -22,7 +22,7 @@ import { VAULT_KEY, deriveKey, seal, open, loadVault, saveVault } from '../js/li
 import { existsSync } from 'node:fs';
 import { allAstroLines } from '../tools/voice-lines.mjs';
 import { VOICE_LINES, VOICE_NAME } from '../js/data/voice-lines.js';
-import { LOOKS, DEFAULT_LOOK, loadLook, saveLook, loadVoicePref, saveVoicePref, pickVoice, personaSvg, speakingMs, typingStep } from '../js/lib/persona.js';
+import { loadVoicePref, saveVoicePref, pickVoice, personaSvg, speakingMs, typingStep } from '../js/lib/persona.js';
 import { validPin, setPin, checkPin, loadLock, afterWrongPin, MAX_TRIES, WAIT_MS, LOCK_KEY } from '../js/lib/lock.js';
 
 const NOW = '2026-11-14T18:00:00.000Z';
@@ -335,26 +335,16 @@ const memory = () => {
   return { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
 };
 
-test('Astro has three looks, remembers the chosen one, and marks AI-made drawings', () => {
-  assert.deepEqual([...LOOKS], ['character', 'sprite', 'bubble']);
-  const storage = memory();
-  assert.equal(loadLook(storage), DEFAULT_LOOK);
-  saveLook(storage, 'sprite');
-  assert.equal(loadLook(storage), 'sprite');
-  saveLook(storage, 'hologram');
-  assert.equal(loadLook(storage), 'sprite');
+test('Astro is always the character: no look switch, and the AI-made drawing is marked', () => {
   const state = demoState(NOW);
-  for (const look of LOOKS) {
-    const html = viewAstro(state, { look });
-    assert.match(html, new RegExp(`class="card chat astro-${look}"`));
-    assert.match(html, new RegExp(`data-look="${look}" aria-pressed="true"`));
-    assert.equal((html.match(/data-action="astro-look"/g) || []).length, 3);
-    // the drawn looks carry a visible AI mark; the bubble has no drawing to mark
-    assert.equal(/Drawn with AI/.test(html), look !== 'bubble');
-    assert.equal(personaSvg(look) !== '', look !== 'bubble');
-    assert.match(html, /data-astro-line data-id="opening"/);
-  }
-  assert.match(viewAstro(state, { look: 'nonsense' }), /astro-character/);
+  // an old saved choice of another look changes nothing
+  const html = viewAstro(state, { look: 'bubble' });
+  assert.match(html, /class="card chat astro-character"/);
+  assert.match(html, /persona-character/);
+  assert.doesNotMatch(html, /astro-look|data-look|>Sprite<|>Bubble<|persona-sprite/);
+  assert.match(html, /Drawn with AI/);
+  assert.match(personaSvg(), /persona-character/);
+  assert.match(html, /data-astro-line data-id="opening"/);
 });
 
 test('what Astro says now is in the speech bubble; what came before is under Earlier', () => {
@@ -526,10 +516,9 @@ test('every line Astro can say is known, and where the voice is recorded no line
     // nothing recorded that Astro never says
     assert.equal(Object.keys(VOICE_LINES).length, lines.length);
   }
-  // an AI-made voice is marked on the screen, in every look
+  // an AI-made voice is marked on the screen
   assert.match(viewAstro(demoState(NOW), { recorded: true }), /Drawn and voiced with AI/);
-  assert.match(viewAstro(demoState(NOW), { recorded: true, look: 'bubble' }), /AI voice/);
-  assert.doesNotMatch(viewAstro(demoState(NOW), { look: 'bubble' }), /AI voice/);
+  assert.doesNotMatch(viewAstro(demoState(NOW), {}), /voiced with AI/);
   // where the tablet's own voice is used, a better one is preferred when the device has it
   const voices = [{ name: 'Samantha', lang: 'en-US', localService: true }, { name: 'Ava (Premium)', lang: 'en-US', localService: true }];
   assert.equal(pickVoice(voices).name, 'Ava (Premium)');
