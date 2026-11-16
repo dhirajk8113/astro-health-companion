@@ -17,6 +17,7 @@ import { viewAstro, viewToday, viewReadings, viewMeds, viewSample, viewEnvironme
 import { isCrisisText } from '../js/lib/checkin.js';
 import { PANELS, simulateSample } from '../js/lib/sample.js';
 import { hasIcon, icon } from '../js/lib/icons.js';
+import { skinMarkup, skinParts, skinPose } from '../js/skin.js';
 import { LOOKS, DEFAULT_LOOK, loadLook, saveLook, loadVoicePref, saveVoicePref, pickVoice, personaSvg, speakingMs, typingStep } from '../js/lib/persona.js';
 import { validPin, setPin, checkPin, loadLock, afterWrongPin, MAX_TRIES, WAIT_MS, LOCK_KEY } from '../js/lib/lock.js';
 
@@ -436,4 +437,38 @@ test('the lock screen asks for a badge, then a PIN, and never shows the digits',
   assert.match(viewLock(state, { stage: 'pin', waitSeconds: 12 }), /Wait 12 s/);
   assert.match(viewLock(state, { stage: 'pin', confirmReset: true }), /Press again to erase this tablet/);
   assert.ok(icon('badge').startsWith('<svg') && icon('nothing') === '');
+});
+
+// ---------- the device drawn like hardware ----------
+
+test('the detailed device is drawn around wherever the screen sits, and its tube and capsule move', () => {
+  const at = (W, H) => ({
+    W, H, scr: { x: 114, y: 74, w: W - 228, h: H - 122 }, shell: { x: 96, y: 34, w: W - 192, h: H - 52 },
+    sample: { x: 18, y: 60, w: 90, h: H - 102 }, meds: { x: W - 108, y: H - 332, w: 90, h: 250 }, clips: [{ x: 211, y: 18 }, { x: W - 263, y: 18 }],
+  });
+  for (const [W, H] of [[1280, 720], [1024, 640], [1920, 1080]]) {
+    const geo = at(W, H);
+    const svg = skinMarkup(geo);
+    assert.doesNotMatch(svg.still + svg.moving, /NaN|undefined/);
+    assert.match(svg.still, new RegExp(`id="sk-still" class="sk" viewBox="0 0 ${W} ${H}"`));
+    assert.match(svg.moving, new RegExp(`id="sk-move" class="sk" viewBox="0 0 ${W} ${H}"`));
+    // decorative: a screen reader is not told about a drawing
+    assert.equal((svg.still + svg.moving).match(/aria-hidden="true"/g).length, 2);
+    for (const label of ['SAMPLE', 'MEDS', 'ANALYSER', 'BADGE', 'AeroNYX']) assert.ok(svg.still.includes(`>${label}<`), label);
+    const parts = skinParts(geo);
+    // the port and the cup stay on their own units
+    assert.ok(parts.slot.cx > geo.sample.x && parts.slot.cx < geo.sample.x + geo.sample.w);
+    assert.ok(parts.cup.x > geo.meds.x && parts.cup.x + parts.cup.w < geo.meds.x + geo.meds.w);
+    assert.ok(parts.cup.y + parts.cup.h < geo.meds.y + geo.meds.h);
+    const held = skinPose(parts, { vial: { kind: 'urine', t: 0 } });
+    const seated = skinPose(parts, { vial: { kind: 'urine', t: 1 } });
+    assert.ok(held.vial.y < 0 && seated.vial.y > held.vial.y);
+    assert.equal(seated.vial.x, parts.slot.cx);
+    const dropped = skinPose(parts, { pill: 1 });
+    assert.ok(dropped.pill.y > parts.cup.y && dropped.pill.y < parts.cup.y + parts.cup.h);
+    assert.ok(skinPose(parts, { pill: 0 }).pill.y < parts.cup.y);
+  }
+  // a short sample unit drops the grip ridges; a tall one has them
+  assert.ok(skinMarkup(at(1280, 720)).still.length > skinMarkup(at(1024, 640)).still.length);
+  assert.deepEqual(skinPose(skinParts(at(1280, 720)), {}), { vial: null, pill: null });
 });

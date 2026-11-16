@@ -11,6 +11,7 @@ import { chatReply, parseRating, CHECKIN_STEPS } from './lib/chat.js';
 import { usesSampleSubmitter } from './lib/device.js';
 import { PANELS, simulateSample } from './lib/sample.js';
 import { initDevice } from './device.js';
+import { initSkin } from './skin.js';
 import { loadLook, saveLook, loadVoicePref, saveVoicePref, speakingMs, typingStep } from './lib/persona.js';
 import { loadLock, setPin, checkPin, afterWrongPin, PIN_LENGTH, IDLE_MS, LOCK_KEY } from './lib/lock.js';
 import { hasSpeech, speak, hush } from './voice.js';
@@ -518,7 +519,7 @@ const actions = {
     const kind = el.dataset.kind;
     if (!PANELS[kind] || (ui.sample && ui.sample.state === 'running')) return;
     ui.sample = { kind, state: 'running' };
-    document.dispatchEvent(new CustomEvent('aeronyx:sample'));
+    document.dispatchEvent(new CustomEvent('aeronyx:sample', { detail: { kind } }));
     render();
     window.setTimeout(() => {
       const now = nowISO();
@@ -619,7 +620,7 @@ const forms = {
     state.readings.push(reading);
     persist();
     toast(`${indicator.name} saved.`);
-    if (usesSampleSubmitter(indicator)) document.dispatchEvent(new CustomEvent('aeronyx:sample'));
+    if (usesSampleSubmitter(indicator)) document.dispatchEvent(new CustomEvent('aeronyx:sample', { detail: { kind: indicator.group } }));
     render();
   },
   chat: (form) => {
@@ -752,4 +753,5 @@ window.setInterval(() => {
 }, 30000);
 
 initDevice();
+initSkin();
 render();
