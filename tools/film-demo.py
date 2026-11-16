@@ -36,7 +36,7 @@ DEVICE_JS = (pathlib.Path(__file__).resolve().parent / 'film-device.js').read_te
 
 SUBS = [
     'A message to Mars can take 20 minutes each way.',
-    "A badge and a PIN open the tablet. Every reading sits against its safe range; NASA's limits are tagged.",
+    "A PIN opens the tablet. Every reading sits against its safe range; NASA's limits are tagged.",
     'A blood or urine specimen goes into the sample port, and the results are logged.',
     'It dispenses each prescribed dose and tracks how the reading moves afterwards.',
     "If the mission dose reaches NASA's 600 mSv limit, the bar turns red and says what to do.",
@@ -309,7 +309,6 @@ def main():
 
         # ---- set up, off camera: create the test PIN, choose the Mars mission, then lock again ----
         page.wait_for_selector('.lock')
-        press('[data-action="lock-scan"]')
         page.wait_for_selector('.pin-pad')
         for d in PIN:
             press(key(d))
@@ -342,36 +341,20 @@ def main():
                         'card': {'kind': 'title', 'o': o, 'p': seg(i, 3, n - 14)} if o > 0 else None})
         film.close()
 
-        # ---- scene 2: a badge and a PIN open the tablet, then the home screen ----
+        # ---- scene 2: a PIN opens the tablet, then the home screen ----
         n = SCENE_FRAMES[1]
         row = lambda name: f'a.gauge[href="#readings/{name}"]'
-        sx, sy = center('[data-action="lock-scan"]')
+        keys = [center(key(d)) for d in PIN]  # the PIN pad is on screen from the first frame
         pos = (VW * 0.63, VH * 0.66)
-        press_at = [40, 46, 52, 58]
-        keys = None
+        press_at = [22, 28, 34, 40]
         pressed = 0
-        scanned = False
         film.open(2)
         for i in range(n):
             st = {'scrollY': 0, 'sub': SUBS[1], 'subO': sub_o(i, n)}
-            if i < 12:
-                t = seg(i, 2, 11)
-                st['cur'] = {'x': lerp(pos[0], sx, t), 'y': lerp(pos[1], sy, t)}
-            elif i < 34:
-                if not scanned:
-                    press('[data-action="lock-scan"]')
-                    scanned = True
-                st['cur'] = {'x': sx, 'y': sy, 'down': seg(i, 12, 18), 'o': 1 - seg(i, 18, 26)}
-                if i == 30:
-                    page.clock.run_for(700)  # the badge read finishes
-                    time.sleep(0.1)
-            elif pressed < 4:
-                if keys is None:
-                    keys = [center(key(d)) for d in PIN]
-                    pos = (sx, sy)
+            if pressed < 4:
                 target = keys[pressed]
                 at = press_at[pressed]
-                since = press_at[pressed - 1] + 1 if pressed else 34
+                since = press_at[pressed - 1] + 1 if pressed else 4
                 t = seg(i, since, at - 1)
                 st['cur'] = {'x': lerp(pos[0], target[0], t), 'y': lerp(pos[1], target[1], t), 'down': seg(i, at - 1, at + 2)}
                 if i == at:
@@ -383,12 +366,12 @@ def main():
                         time.sleep(0.2)
                         ev('() => window.scrollTo(0, 0)')
             else:
-                st['cur'] = {'x': pos[0], 'y': pos[1], 'o': 1 - seg(i, 59, 63)}
+                st['cur'] = {'x': pos[0], 'y': pos[1], 'o': 1 - seg(i, 41, 45)}
                 st['fade'] = 0
-                if 66 <= i < 92:
-                    st['ring'] = {'sel': row('urine_vol'), 'o': min(seg(i, 66, 74), 1 - seg(i, 86, 92)), 'pad': 5}
-                elif i >= 92:
-                    st['ring'] = {'sel': row('dose'), 'o': min(seg(i, 92, 100), 1 - seg(i, n - 8, n - 2)), 'pad': 5}
+                if 48 <= i < 82:
+                    st['ring'] = {'sel': row('urine_vol'), 'o': min(seg(i, 48, 56), 1 - seg(i, 76, 82)), 'pad': 5}
+                elif i >= 82:
+                    st['ring'] = {'sel': row('dose'), 'o': min(seg(i, 82, 90), 1 - seg(i, n - 8, n - 2)), 'pad': 5}
             film.frame(st)
         film.close()
 

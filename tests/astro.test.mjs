@@ -413,12 +413,11 @@ test('wrong PINs are counted, and the keypad rests after too many', () => {
   assert.equal(s.tries, 0);
 });
 
-test('the lock screen asks for a badge, then a PIN, and never shows the digits', () => {
+test('the lock screen asks for a PIN, with no badge step, and never shows the digits', () => {
   const state = demoState(NOW);
-  let html = viewLock(state, { stage: 'badge' });
-  assert.match(html, /data-action="lock-scan"/);
-  assert.doesNotMatch(html, /pin-pad/);
-  assert.match(viewLock(state, { stage: 'badge', scanning: true }), /Reading badge/);
+  let html = viewLock(state, {});
+  assert.match(html, /pin-pad/);
+  assert.doesNotMatch(html, /badge|lock-scan/i);
   html = viewLock(state, { stage: 'create', entry: '12' });
   assert.match(html, /Create a PIN/);
   assert.equal((html.match(/class="pin-dot on"/g) || []).length, 2);
@@ -430,7 +429,7 @@ test('the lock screen asks for a badge, then a PIN, and never shows the digits',
   assert.match(html, /Forgot PIN/);
   assert.match(viewLock(state, { stage: 'pin', waitSeconds: 12 }), /Wait 12 s/);
   assert.match(viewLock(state, { stage: 'pin', confirmReset: true }), /Press again to erase this tablet/);
-  assert.ok(icon('badge').startsWith('<svg') && icon('nothing') === '');
+  assert.ok(icon('lock').startsWith('<svg') && icon('badge') === '' && icon('nothing') === '');
 });
 
 // ---------- the device drawn like hardware ----------
@@ -448,7 +447,7 @@ test('the detailed device is drawn around wherever the screen sits, and its tube
     assert.match(svg.moving, new RegExp(`id="sk-move" class="sk" viewBox="0 0 ${W} ${H}"`));
     // decorative: a screen reader is not told about a drawing
     assert.equal((svg.still + svg.moving).match(/aria-hidden="true"/g).length, 2);
-    for (const label of ['SAMPLE', 'MEDS', 'ANALYSER', 'BADGE', 'AeroNYX']) assert.ok(svg.still.includes(`>${label}<`), label);
+    for (const label of ['SAMPLE', 'MEDS', 'ANALYSER', 'AeroNYX']) assert.ok(svg.still.includes(`>${label}<`), label);
     const parts = skinParts(geo);
     // the port and the cup stay on their own units
     assert.ok(parts.slot.cx > geo.sample.x && parts.slot.cx < geo.sample.x + geo.sample.w);

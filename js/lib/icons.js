@@ -30,7 +30,6 @@ const PATHS = {
   sound: '<path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11"/>',
   mute: '<path d="M4 10v4h4l5 4V6L8 10z"/><path d="M17 9.5l4 5M21 9.5l-4 5"/>',
   lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
-  badge: '<rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="10" r="2.5"/><path d="M9 16h6M10 3v2h4V3"/>',
   back: '<path d="M21 5H9l-6 7 6 7h12zM12 9l5 6M17 9l-5 6"/>',
   // the Space screen
   sun: SUN,

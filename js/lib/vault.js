@@ -3,7 +3,7 @@
 // with PBKDF2, and it is opened only after the PIN is entered.
 //
 // What this does not do: a four-digit PIN is short, so someone holding the
-// tablet could try all 10,000. A flight unit would add a key held on the badge.
+// tablet could try all 10,000. A flight unit would need a longer code or a second factor.
 //
 // AI disclosure: written with an AI coding assistant (Claude). See AI-USE.md.
 
