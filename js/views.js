@@ -382,9 +382,9 @@ export function viewAstro(state, ui = {}) {
       </div>
       ${said ? `<p class="said"><span class="sr-only">You said: </span>${esc(said.text)}</p>` : ''}
       <div class="stage" data-astro-stage>
-        ${persona ? `<div class="persona-wrap">${persona}<span class="ai-mark">Drawn with AI</span></div>` : ''}
+        ${persona ? `<div class="persona-wrap">${persona}<span class="ai-mark">${ui.recorded ? 'Drawn and voiced with AI' : 'Drawn with AI'}</span></div>` : ''}
         <div class="speech${handoffNow ? ' is-handoff' : ''}" aria-live="polite">
-          ${persona ? '' : '<span class="speech-name">Astro<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></span>'}
+          ${persona ? '' : `<span class="speech-name">Astro<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>${ui.recorded ? '<span class="ai-mark ai-mark-inline">AI voice</span>' : ''}</span>`}
           <p class="speech-text" data-astro-line data-id="${esc(line.id || '')}">${esc(line.text)}</p>
         </div>
       </div>

@@ -14,7 +14,7 @@ import { initDevice } from './device.js';
 import { initSkin } from './skin.js';
 import { loadLook, saveLook, loadVoicePref, saveVoicePref, speakingMs, typingStep } from './lib/persona.js';
 import { loadLock, setPin, checkPin, afterWrongPin, PIN_LENGTH, IDLE_MS, LOCK_KEY } from './lib/lock.js';
-import { hasSpeech, speak, hush } from './voice.js';
+import { hasSpeech, hasRecordings, recordingMs, speak, hush } from './voice.js';
 import { loadState, saveState, clearState, isFirstVisit, newId, merge, hasPlainState, dropPlainState } from './lib/store.js';
 import { VAULT_KEY, deriveKey, seal, open, loadVault, saveVault } from './lib/vault.js';
 import { viewToday, viewReadings, viewMeds, viewAstro, viewSample, viewSurgeon, viewSetup, viewAbout, viewEnvironment, viewLock } from './views.js';
@@ -180,7 +180,7 @@ function render({ keepFields = false } = {}) {
   switch (r.name) {
     case 'readings': html = viewReadings(state, r.arg); break;
     case 'meds': html = viewMeds(state, nowISO()); break;
-    case 'astro': html = viewAstro(state, { flow: ui.flow, look: ui.look, voice: ui.voice, canSpeak: hasSpeech() }); break;
+    case 'astro': html = viewAstro(state, { flow: ui.flow, look: ui.look, voice: ui.voice, canSpeak: hasSpeech(), recorded: hasRecordings() }); break;
     case 'sample': html = viewSample(state, { sample: ui.sample }); break;
     case 'surgeon': html = viewSurgeon(state, nowISO()); break;
     case 'setup': html = viewSetup(state); break;
@@ -264,7 +264,9 @@ function perform() {
     }, 24);
   }
   const voiced = ui.voice && speak(text, () => { spoken = true; settle(); });
-  mine.done = window.setTimeout(() => { spoken = true; settle(); }, voiced ? speakingMs(text) + 4000 : Math.min(2800, speakingMs(text)));
+  // If the voice never reports its end, stop the character talking once the line must be over.
+  const longest = Math.max(speakingMs(text) + 4000, recordingMs(text) + 1500);
+  mine.done = window.setTimeout(() => { spoken = true; settle(); }, voiced ? longest : Math.min(2800, speakingMs(text)));
 }
 
 // Act out whatever Astro is saying now once more, after its look or voice changes.

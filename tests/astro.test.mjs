@@ -19,6 +19,9 @@ import { PANELS, simulateSample } from '../js/lib/sample.js';
 import { hasIcon, icon } from '../js/lib/icons.js';
 import { skinMarkup, skinParts, skinPose } from '../js/skin.js';
 import { VAULT_KEY, deriveKey, seal, open, loadVault, saveVault } from '../js/lib/vault.js';
+import { existsSync } from 'node:fs';
+import { allAstroLines } from '../tools/voice-lines.mjs';
+import { VOICE_LINES, VOICE_NAME } from '../js/data/voice-lines.js';
 import { LOOKS, DEFAULT_LOOK, loadLook, saveLook, loadVoicePref, saveVoicePref, pickVoice, personaSvg, speakingMs, typingStep } from '../js/lib/persona.js';
 import { validPin, setPin, checkPin, loadLock, afterWrongPin, MAX_TRIES, WAIT_MS, LOCK_KEY } from '../js/lib/lock.js';
 
@@ -503,4 +506,31 @@ test('the stored record is ciphertext, opens with the right PIN and with no othe
   // a damaged entry reads as no vault, not as a crash
   storage.setItem(VAULT_KEY, '{not json');
   assert.equal(loadVault(storage), null);
+});
+
+// ---------- Astro's recorded voice ----------
+
+test('every line Astro can say is known, and where the voice is recorded no line is missing', () => {
+  const lines = allAstroLines();
+  assert.ok(lines.length >= 40, `only ${lines.length} lines`);
+  assert.equal(new Set(lines).size, lines.length);
+  for (const must of [OPENING, HANDOFF_TEXT, ...CHECKIN_STEPS.map((s) => s.ask)]) assert.ok(lines.includes(must));
+  if (Object.keys(VOICE_LINES).length) {
+    assert.ok(VOICE_NAME);
+    for (const line of lines) {
+      const entry = VOICE_LINES[line];
+      assert.ok(entry, `no recording for: ${line.slice(0, 60)}`);
+      assert.ok(existsSync(new URL(`../media/voice/${entry.file}`, import.meta.url)), `${entry.file} is not in media/voice`);
+      assert.ok(entry.seconds > 0.5);
+    }
+    // nothing recorded that Astro never says
+    assert.equal(Object.keys(VOICE_LINES).length, lines.length);
+  }
+  // an AI-made voice is marked on the screen, in every look
+  assert.match(viewAstro(demoState(NOW), { recorded: true }), /Drawn and voiced with AI/);
+  assert.match(viewAstro(demoState(NOW), { recorded: true, look: 'bubble' }), /AI voice/);
+  assert.doesNotMatch(viewAstro(demoState(NOW), { look: 'bubble' }), /AI voice/);
+  // where the tablet's own voice is used, a better one is preferred when the device has it
+  const voices = [{ name: 'Samantha', lang: 'en-US', localService: true }, { name: 'Ava (Premium)', lang: 'en-US', localService: true }];
+  assert.equal(pickVoice(voices).name, 'Ava (Premium)');
 });

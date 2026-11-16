@@ -44,6 +44,9 @@ const PREFERRED = ['Samantha', 'Karen', 'Moira', 'Microsoft Aria', 'Microsoft Je
 export function pickVoice(voices) {
   const local = (voices || []).filter((v) => v && v.localService && /^en(-|_|$)/i.test(v.lang || ''));
   if (!local.length) return null;
+  // A device's better voices say so in their names.
+  const fine = local.find((v) => /premium|enhanced|natural|neural/i.test(String(v.name)));
+  if (fine) return fine;
   for (const name of PREFERRED) {
     const hit = local.find((v) => String(v.name).includes(name));
     if (hit) return hit;
